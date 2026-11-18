@@ -47,7 +47,7 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
 /* iPad portrait and compact tablets */
 @media (min-width:640px) and (max-width:900px){
   .app-shell{padding-left:max(28px,env(safe-area-inset-left,0px));padding-right:max(28px,env(safe-area-inset-right,0px))}
-  .topbar{height:88px}.hero{min-height:238px;padding:36px 38px}.hero h1{font-size:42px}.hero-note{max-width:430px}
+  .topbar{height:88px}.hero{min-height:204px;padding:30px 34px}.hero h1{font-size:36px;margin:10px 0 8px}.hero-note{max-width:430px;font-size:14px}
   .today-grid{grid-template-columns:minmax(0,1.45fr) minmax(220px,.7fr)}.panel{padding:24px}.task-time{width:72px}.tag{display:none}
   .quick-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.quick-nav button{min-height:78px}
   .week-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.week-cards .day-card:last-child{grid-column:auto}.day-card{min-height:196px}
@@ -92,3 +92,21 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
 .homework-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}.homework-emoji{font-size:24px}.homework-card h3{font-size:18px;margin:0}.homework-card p{font-size:12px;color:var(--muted);margin:4px 0 0}.homework-card textarea{width:100%;min-height:138px;resize:vertical;border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 12px;font-size:14px;line-height:1.6}.homework-upload{display:flex;align-items:center;justify-content:center;min-height:44px;margin-top:10px;border-radius:10px;background:#edf3eb;color:var(--sage-deep);font-size:13px;cursor:pointer}.homework-upload input{display:none}.homework-file{margin-top:8px;color:#9a806f;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.homework-footer{display:flex;align-items:center;gap:14px;margin-top:18px}.homework-footer span{color:var(--muted);font-size:12px}
 @media (min-width:640px) and (max-width:900px){.homework-grid{grid-template-columns:1fr 1fr}.homework-card:last-child{grid-column:1/-1}}
 @media (max-width:639px){.homework-grid{grid-template-columns:1fr}.homework-card{padding:17px}.homework-footer{align-items:stretch;flex-direction:column}.homework-footer .primary-btn{width:100%}}
+
+/* 首屏优先展示任务：Hero 作为今日提示，而不是宣传页主视觉 */
+.hero{min-height:196px;padding:30px 38px}
+.hero h1{font-size:clamp(32px,3.4vw,42px);margin:10px 0 8px}
+.hero-note{font-size:15px}.sleep-pill{min-height:44px;padding:10px 14px}
+.hero:after{width:220px;height:220px;right:-64px;top:-78px;opacity:.7}
+@media (min-width:901px){.hero{min-height:176px;padding:26px 38px}.hero h1{font-size:40px}.hero-note{font-size:15px}}
+@media (min-width:640px) and (max-width:900px){.hero{min-height:204px;padding:30px 34px}.hero h1{font-size:36px;margin:10px 0 8px}.hero-note{font-size:14px}}
+@media (max-width:639px){.hero{min-height:190px;padding:24px 22px}.hero h1{font-size:32px}.hero-note{font-size:14px}.sleep-pill{min-height:42px}}
+
+/* 模板套用与保存：把“初始化”和“编辑提交”分成两个明确步骤 */
+.template-kicker{display:block;color:#9a806f;font-size:10px;font-weight:800;letter-spacing:.12em;margin-bottom:6px}
+.template-summary{display:flex;align-items:center;gap:12px;margin:18px 0 22px;padding:15px 17px;border:1px solid #dfe8dc;border-radius:14px;background:#f4f8f1}
+.template-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#dbe9d8;color:var(--sage-deep);font-weight:800}
+.template-summary b{display:block;font-size:14px}.template-summary small{display:block;color:#788379;font-size:12px;margin-top:3px}.template-badge{margin-left:auto;white-space:nowrap;color:var(--sage-deep);font-size:11px;background:#e8f1e5;border-radius:99px;padding:6px 9px}
+.schedule-editor-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding-top:20px;border-top:1px solid var(--line)}
+.schedule-editor-heading h3{font-size:17px;margin:0}.schedule-editor-heading p{font-size:12px;color:var(--muted);margin:5px 0 0}.schedule-save-actions{display:flex;align-items:center;gap:11px;flex:none}.schedule-save-status{font-size:12px;color:#7b887d}.schedule-save-status.dirty{color:#b36f52;font-weight:700}.schedule-save-btn{min-height:44px;padding:0 16px;border-radius:10px;background:var(--sage-deep);color:#fff;font-size:13px;box-shadow:0 5px 14px rgba(85,117,101,.16)}.schedule-save-btn:hover{background:#456553;transform:translateY(-1px)}
+@media(max-width:639px){.template-summary{margin-top:16px}.template-badge{font-size:10px}.schedule-editor-heading{display:block}.schedule-save-actions{justify-content:space-between;margin-top:14px}.schedule-save-btn{flex:1}.schedule-settings-head p{max-width:290px}}
