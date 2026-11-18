@@ -5,7 +5,8 @@ data.history=data.history||[]; data.mistakes=data.mistakes||[];
 // tasks = 固定周模板（按星期几）；days = 某一天（YYYY-MM-DD）的临时覆盖
 data.tasks=Object.assign({0:[],1:[],2:[],3:[],4:[],5:[],6:[]},data.tasks||{});
 data.days=data.days||{}; data.custom=data.custom||[];
-const normalizeTask=t=>Array.isArray(t)&&t.length>=5?[t[0]||'',t[1]||'',t[2]||'',t[3]||'活动',!!t[4]]:[t?.[0]||'', '',t?.[1]||'',t?.[2]||'活动',!!t?.[3]];
+const inferEnd=(start,title)=>{const minutes=/到家/.test(title)?40:/晚餐/.test(title)?30:/学校作业/.test(title)?60:/爸爸奥数/.test(title)?30:/线上语文/.test(title)?70:/英语听力|英文绘本/.test(title)?15:/单词复习/.test(title)?10:/舞蹈/.test(title)?120:/架子鼓/.test(title)?90:/昂立英语/.test(title)?180:/昂立课后作业/.test(title)?30:0;if(!minutes||!/^\d{2}:\d{2}$/.test(start))return '';const [h,m]=start.split(':').map(Number),total=h*60+m+minutes;return `${String(Math.floor(total/60)%24).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`};
+const normalizeTask=t=>Array.isArray(t)&&t.length>=5?[t[0]||'',t[1]||'',t[2]||'',t[3]||'活动',!!t[4]]:[t?.[0]||'',inferEnd(t?.[0]||'',t?.[1]||''),t?.[1]||'',t?.[2]||'活动',!!t?.[3]];
 Object.keys(data.tasks).forEach(k=>{data.tasks[k]=(data.tasks[k]||[]).map(normalizeTask)});Object.keys(data.days).forEach(k=>{data.days[k]=(data.days[k]||[]).map(normalizeTask)});
 const save=()=>localStorage.setItem(STORE,JSON.stringify(data));
 const today=new Date(); const day=(today.getDay()+6)%7; const cnDays=['周一','周二','周三','周四','周五','周六','周日'];
