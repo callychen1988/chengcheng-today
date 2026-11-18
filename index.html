@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f5ef" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="澄澄的今天" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>澄澄的今天 · 我自己来安排</title>
+  <meta name="description" content="给小学四年级孩子使用的轻量家庭学习工作台。" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">澄</span><div><strong>澄澄的今天</strong><span>我自己来安排</span></div></div>
+      <div class="topbar-actions"><button class="icon-btn" id="quickAdd" aria-label="添加任务">＋</button><button class="avatar" id="openSettings" aria-label="打开家长设置">家</button></div>
+    </header>
+    <main>
+      <section class="hero" id="todayView">
+        <div class="hero-copy"><p class="eyebrow" id="todayLabel">今天 · 11月18日 星期三</p><h1>今天，我自己来安排。</h1><p class="hero-note" id="dayMood">今天是轻松日，先上好语文课，其他时间留给自己。</p></div>
+        <div class="sleep-pill"><span class="sun-dot">☼</span><span><b id="wakeDisplay">—</b> 起床 <i>·</i> <b id="sleepDisplay">—</b> 关灯</span></div>
+      </section>
+
+      <section class="today-grid" aria-label="今日安排">
+        <div class="panel timeline-panel"><div class="panel-heading"><div><span class="section-kicker">NOW / 今日</span><h2>今天要做什么</h2></div><button class="text-btn" id="clearDone">收好今天的记录</button></div><div id="todayTasks" class="task-list"></div><div class="add-row"><input id="newTask" placeholder="加一件自己的小事…" maxlength="30" /><button id="addTask">添加</button></div></div>
+        <aside class="panel next-panel"><span class="section-kicker">接下来</span><div id="nextEvent" class="next-event"></div><div class="mini-divider"></div><div class="tiny-note"><span class="leaf">✦</span><span>完成后就可以安心去玩啦。<br/>今天不追求全部塞满。</span></div></aside>
+      </section>
+
+      <section class="quick-nav"><button data-view="week"><span class="nav-icon calendar-icon">▦</span><span><b>我的一周</b><small>课程 · 作业 · 活动</small></span><span class="chevron">›</span></button><button data-view="english"><span class="nav-icon book-icon">▤</span><span><b>英语时间</b><small>听力 · 绘本 · 单词</small></span><span class="chevron">›</span></button><button data-view="mistakes"><span class="nav-icon pencil-icon">✎</span><span><b>再试一次</b><small>整理 · 复习 · 掌握</small></span><span class="chevron">›</span></button><button data-view="growth"><span class="nav-icon growth-icon">✦</span><span><b>我做过的事</b><small>我完成过的每一件小事</small></span><span class="chevron">›</span></button></section>
+
+      <section class="view hidden" id="weekView"><div class="view-header"><div><span class="section-kicker">WEEK / 一周</span><h2>这一周，慢慢来</h2></div><div class="week-switch"><button id="prevWeek">‹</button><span id="weekRange"></span><button id="nextWeek">›</button></div></div><div id="weekCards" class="week-cards"></div></section>
+      <section class="view hidden" id="englishView"><div class="view-header"><div><span class="section-kicker">ENGLISH / 英语</span><h2>英语小天地</h2></div><span class="soft-badge">每次一点点</span></div><div class="learning-grid" id="englishCards"></div><div class="tip-card"><span>☼</span><div><b>小提醒</b><p>听力、绘本和单词不用每天全做。今天有点累，就只选一项。</p></div></div></section>
+      <section class="view hidden" id="mistakesView"><div class="view-header"><div><span class="section-kicker">REVIEW / 错题</span><h2>把不会的，变成会的</h2></div><button class="primary-btn" id="captureMistake">⌾ 拍照记录</button></div><div id="mistakeList" class="mistake-list"></div></section>
+      <section class="view hidden" id="growthView"><div class="view-header"><div><span class="section-kicker">GROWTH / 成长</span><h2>看见自己的努力</h2></div><span class="soft-badge">不比较，只记录</span></div><div class="growth-hero" id="growthSummary"></div><div class="growth-note"><label>今天我想记住<textarea id="growthNote" maxlength="80" placeholder="比如：我自己开始了作业，或者我坚持做完了听力…"></textarea></label><button class="primary-btn" id="saveGrowthNote">保存一句话</button></div><div class="parent-tools"><div><b>给家长的成长记录</b><small>定期把错题和反思带到家长系统</small></div><div class="parent-tool-buttons"><button class="text-btn" id="exportGrowth">导出记录</button><label class="import-btn">导入记录<input id="importGrowth" type="file" accept=".json,.ccgrowth,application/json" /></label></div></div><h3 class="sub-heading">最近完成过</h3><div id="growthList" class="growth-list"></div></section>
+      <section class="view hidden" id="familyView"><div class="view-header"><div><span class="section-kicker">FAMILY / 家庭</span><h2>家庭安排</h2></div><button class="primary-btn" id="saveFamily">保存设置</button></div><div class="family-grid"><div class="settings-card"><h3>固定作息</h3><label>起床时间<input id="wakeTime" type="time" /></label><label>关灯时间<input id="sleepTime" type="time" /></label></div><div class="settings-card"><h3>接送与分工</h3><label>工作日放学后<select id="weekdayCare"><option>家庭成员协助</option><option>待确认</option></select></label><label>临时变更备用<select id="backupCare"><option>家庭成员协调</option><option>其他照顾者协助</option><option>待确认</option></select></label><label>接送备注<textarea id="pickupNote" placeholder="还没确定的安排写在这里…"></textarea></label></div></div><div class="schedule-settings"><div class="schedule-settings-head"><div><h3>一周安排</h3><p>直接填写每天的课程、作业和活动，内容只保存在当前设备。</p></div></div><div id="familyScheduleEditor" class="family-schedule-editor"></div></div><button id="exportFamily" class="hidden"></button><input id="importFamily" class="hidden" type="file" /></section>
+    </main>
+    <nav class="bottom-nav" aria-label="主导航"><button class="active" data-view="today"><span>⌂</span>今天</button><button data-view="week"><span>▦</span>一周</button><button data-view="english"><span>▤</span>英语</button><button data-view="mistakes"><span>✎</span>错题</button><button data-view="family"><span>♡</span>家庭</button></nav>
+  </div>
+  <div class="modal hidden" id="mistakeModal"><div class="modal-card"><button class="modal-close" data-close="mistakeModal">×</button><span class="section-kicker">NEW / 新错题</span><h2>记下来，下次就会了</h2><label>科目<input id="mistakeSubject" placeholder="例如：数学" /></label><label>我错在哪里<textarea id="mistakeText" placeholder="用自己的话写一写…"></textarea></label><button class="primary-btn full" id="saveMistake">保存错题</button></div></div>
+  <div class="modal hidden" id="captureModal"><div class="modal-card capture-card"><button class="modal-close" data-close="captureModal">×</button><span class="section-kicker">CAPTURE / 记录</span><h2>拍下来，再想一想</h2><label>错题照片</label><div class="camera-actions"><button class="camera-btn" id="startCamera">⌾ 打开相机拍照</button><input id="mistakePhoto" class="hidden" type="file" accept="image/*" /></div><div id="cameraBox" class="camera-box hidden"><video id="cameraPreview" autoplay playsinline></video><button class="primary-btn full" id="takePhoto">拍下这道题</button></div><img id="photoPreview" class="photo-preview hidden" alt="错题预览" /><label>科目<input id="captureSubject" placeholder="例如：数学" /></label><label>我觉得错在哪里<textarea id="captureText" placeholder="可以直接用 iPad 键盘上的麦克风说一说…"></textarea></label><button class="guide-btn" id="guideThinking">✦ 帮我想一想</button><div id="guidePanel" class="guide-panel hidden"><div class="guide-disclaimer">只根据你说的话来提问，不看错题照片</div><div class="guide-step" id="guideStep"></div><div class="guide-question" id="guideQuestion"></div><textarea id="guideAnswer" placeholder="用自己的话说，不用担心说错…"></textarea><div class="guide-actions"><button class="text-btn" id="guideBack">上一步</button><button class="primary-btn" id="guideNext">下一步</button></div></div><label>这次我学到了<textarea id="learningFeedback" class="feedback-box" readonly placeholder="先写下自己的想法，这里会出现一句小提醒…"></textarea></label><button class="primary-btn full" id="saveCapture">保存这道错题</button><button id="recordReflection" class="hidden"></button><button id="addMistake" class="hidden"></button><span id="recordStatus" class="hidden"></span><audio id="reflectionAudio" class="hidden"></audio></div></div>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
