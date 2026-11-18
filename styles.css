@@ -147,3 +147,20 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
   .day-item strong{font-size:12px}
   .day-name{font-size:14px}
 }
+
+/* 发布到 iPad */
+.publish-panel{margin-top:18px;padding:20px 22px;border-radius:20px;background:#fff;border:1px solid rgba(49,89,67,.10);box-shadow:0 6px 18px rgba(49,89,67,.05)}
+.publish-head h3{margin:0 0 6px;font-size:16px;color:#315943}
+.publish-head p{margin:0;font-size:13px;line-height:1.7;color:#8a8f86}
+.publish-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center}
+.publish-actions .primary-btn,.publish-actions .text-btn{min-height:46px;padding:0 20px;border-radius:999px;font-size:14px}
+.publish-actions .text-btn{border:1px solid rgba(49,89,67,.22);background:#fff;color:#3f5c4c;padding:0 18px}
+.publish-token{margin-top:14px;font-size:13px;color:#6b7268;border-top:1px dashed rgba(49,89,67,.14);padding-top:12px}
+.publish-token summary{cursor:pointer;color:#4d6b57;font-weight:600}
+.publish-token input{width:100%;margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid rgba(49,89,67,.18);font-size:14px;box-sizing:border-box}
+.publish-token small{display:block;margin-top:8px;line-height:1.6;color:#9aa096}
+@media(max-width:780px){
+  .publish-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .publish-actions .primary-btn{grid-column:1 / -1}
+  .publish-actions .text-btn{width:100%}
+}

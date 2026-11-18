@@ -6,7 +6,7 @@
  * - 静态资源走 stale-while-revalidate，先秒开缓存、后台静默更新。
  * - 升级时只需要把 CACHE 版本号 +1，旧缓存会在 activate 阶段清掉。
  */
-const CACHE = 'chengcheng-v11';
+const CACHE = 'chengcheng-v12';
 
 const CORE_FILES = [
   './',
@@ -61,6 +61,23 @@ self.addEventListener('fetch', event => {
         .catch(() =>
           caches.match('./index.html').then(hit => hit || caches.match('./'))
         )
+    );
+    return;
+  }
+
+  // 本周内容：必须拿最新的，否则发布后 iPad 看不到；断网时回退到上次缓存
+  if (url.pathname.endsWith('/content.json')) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put('./content.json', copy));
+            return response;
+          }
+          return caches.match('./content.json').then(hit => hit || response);
+        })
+        .catch(() => caches.match('./content.json'))
     );
     return;
   }

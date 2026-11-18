@@ -192,3 +192,113 @@ const previousSaveCapture=document.getElementById('saveCapture').onclick;documen
 const escapeAttr=value=>String(value??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function renderFamilyEditor(){const editor=document.getElementById('familyScheduleEditor');editor.innerHTML=cnDays.map((name,dayIndex)=>{const tasks=familyDraft[dayIndex]||[];return `<div class="family-day-editor"><div class="family-day-head"><b>${name}</b><button class="add-schedule-btn" data-add-day="${dayIndex}">＋ 添加安排</button></div>${tasks.length?tasks.map((task,taskIndex)=>`<div class="schedule-edit-row"><input type="time" value="${escapeAttr(task[0])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="0" aria-label="${name}开始时间"><input type="time" value="${escapeAttr(task[1])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="1" aria-label="${name}结束时间"><input value="${escapeAttr(task[2])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="2" placeholder="安排内容" aria-label="${name}安排内容"><input class="schedule-tag" value="${escapeAttr(task[3])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="3" placeholder="类别" aria-label="${name}类别"><button class="delete-schedule-btn" data-delete-day="${dayIndex}" data-delete-index="${taskIndex}" aria-label="删除安排">×</button></div>`).join(''):'<div class="schedule-empty">还没有安排</div>'}</div>`}).join('');editor.querySelectorAll('[data-add-day]').forEach(button=>button.onclick=()=>{const dayIndex=Number(button.dataset.addDay);familyDraft[dayIndex]=familyDraft[dayIndex]||[];familyDraft[dayIndex].push(['','','新安排','活动',false]);markFamilyScheduleDirty();renderFamilyEditor()});editor.querySelectorAll('[data-edit-day]').forEach(input=>input.onchange=()=>{const task=familyDraft[Number(input.dataset.editDay)][Number(input.dataset.editIndex)];task[Number(input.dataset.editField)]=input.value;markFamilyScheduleDirty()});editor.querySelectorAll('[data-delete-day]').forEach(button=>button.onclick=()=>{familyDraft[Number(button.dataset.deleteDay)].splice(Number(button.dataset.deleteIndex),1);markFamilyScheduleDirty();renderFamilyEditor()})}
 renderFamilyEditor();
+
+/* ===== 本周内容发布与同步：电脑发布，iPad 只读拉取 ===== */
+const GH_REPO='callychen1988/chengcheng-today', GH_BRANCH='main', CONTENT_PATH='content.json', GH_TOKEN_KEY='cc-gh-token';
+const bytesToB64=bytes=>{let s='';for(const byte of bytes)s+=String.fromCharCode(byte);return btoa(s)};
+function buildContentPayload(){
+  const hw=homeworkForWeek(), homework={};
+  homeworkTypes.forEach((type,i)=>{const item=hw[i]||{};homework[i]={text:item.text||'',fileName:item.fileName||''}});
+  const tasks={};
+  for(let i=0;i<7;i++)tasks[i]=(data.tasks[i]||[]).map(t=>[t[0]||'',t[1]||'',t[2]||'',t[3]||'活动',false]);
+  return {
+    format:'chengcheng-content', version:1, updatedAt:new Date().toISOString(),
+    weekLabel:(()=>{const b=weekStart();return `${b.getMonth()+1}月${b.getDate()}日这周`})(),
+    tasks, homework,
+    settings:{weekdayCare:data.settings.weekdayCare,backupCare:data.settings.backupCare,pickupNote:data.settings.pickupNote}
+  };
+}
+function applyRemoteContent(content){
+  if(!content||content.format!=='chengcheng-content')return false;
+  const ts=Date.parse(content.updatedAt||'')||0; if(!ts)return false;
+  data.sync=data.sync||{tasksAt:0,homeworkAt:0,version:''};
+  let changed=false;
+  if(content.tasks&&ts>(data.sync.tasksAt||0)){
+    const next={};
+    for(let i=0;i<7;i++)next[i]=(content.tasks[i]||[]).map(t=>[t[0]||'',t[1]||'',t[2]||'',t[3]||'活动',false]);
+    data.tasks=next; data.sync.tasksAt=ts; changed=true;
+  }
+  if(content.homework&&ts>(data.sync.homeworkAt||0)){
+    const key=weekKeys()[0], week=data.homeworkWeeks[key]||(data.homeworkWeeks[key]={});
+    Object.keys(content.homework).forEach(i=>{
+      const incoming=content.homework[i]||{}, current=week[i]||{};
+      if((incoming.text||'')!==(current.text||'')||(incoming.fileName||'')!==(current.fileName||''))
+        week[i]={text:incoming.text||'',fileName:incoming.fileName||'',done:current.done||{}};
+    });
+    data.sync.homeworkAt=ts; changed=true;
+  }
+  if(content.settings&&content.tasks&&ts===(data.sync.tasksAt||0)){
+    ['weekdayCare','backupCare','pickupNote'].forEach(k=>{if(content.settings[k]!=null)data.settings[k]=content.settings[k]});
+  }
+  data.sync.version=content.updatedAt||new Date(ts).toISOString();
+  save();
+  if(changed){
+    familyDraft=JSON.parse(JSON.stringify(data.tasks));
+    renderToday(); renderWeek(); renderHomework(false); renderFamilyEditor(); loadSettings();
+  }
+  return changed;
+}
+async function pullRemoteContent(silent=true){
+  try{
+    const res=await fetch(`${CONTENT_PATH}?t=${Date.now()}`,{cache:'no-store'});
+    if(!res.ok)return false;
+    const content=await res.json();
+    const changed=applyRemoteContent(content);
+    if(!silent)setPublishStatus(changed?'已拉取到最新内容':'内容已是最新');
+    else if(changed)setPublishStatus('已同步最新内容');
+    return changed;
+  }catch(e){ if(!silent)setPublishStatus('拉取失败，请检查网络'); return false }
+}
+function setPublishStatus(text){const el=document.getElementById('publishStatus');if(el)el.textContent=text}
+function downloadContentFile(){
+  const blob=new Blob([JSON.stringify(buildContentPayload(),null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='content.json';
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  setPublishStatus('已下载 content.json，把它放到项目根目录后同步即可');
+}
+async function publishToGitHub(){
+  const token=(document.getElementById('publishToken')?.value||localStorage.getItem(GH_TOKEN_KEY)||'').trim();
+  if(!token){document.getElementById('publishTokenBox').open=true;document.getElementById('publishToken').focus();setPublishStatus('请先填入 GitHub Token');return}
+  localStorage.setItem(GH_TOKEN_KEY,token);
+  setPublishStatus('正在发布…');
+  const content=buildContentPayload(), api=`https://api.github.com/repos/${GH_REPO}/contents/${CONTENT_PATH}`;
+  const headers={Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  try{
+    let sha=null;
+    const head=await fetch(api,{headers,cache:'no-store'});
+    if(head.ok)sha=(await head.json()).sha;
+    const body={message:`发布本周内容 · ${new Date().toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}`,content:bytesToB64(new TextEncoder().encode(JSON.stringify(content,null,2))),branch:GH_BRANCH};
+    if(sha)body.sha=sha;
+    const res=await fetch(api,{method:'PUT',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.ok){
+      const ts=Date.parse(content.updatedAt);
+      data.sync=data.sync||{};data.sync.tasksAt=ts;data.sync.homeworkAt=ts;data.sync.version=content.updatedAt;save();
+      setPublishStatus(`已发布 ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}，约 1 分钟后 iPad 刷新可见`);
+    }else if(res.status===401||res.status===403){
+      setPublishStatus('Token 无效或没有该仓库的写权限');
+    }else if(res.status===404){
+      setPublishStatus('仓库不存在或 Token 未授权此仓库');
+    }else{
+      setPublishStatus(`发布失败（${res.status}）`);
+    }
+  }catch(e){ setPublishStatus('发布失败，请检查网络后重试') }
+}
+function ensurePublishPanel(){
+  const family=document.getElementById('familyView');
+  if(!family||document.getElementById('publishPanel'))return;
+  const panel=document.createElement('div');
+  panel.id='publishPanel';
+  panel.className='publish-panel';
+  panel.innerHTML=`<div class="publish-head"><div><h3>发布到 iPad</h3><p id="publishStatus">在这里改完安排和作业，点一下发布，iPad 打开就是最新的。</p></div></div>
+    <div class="publish-actions"><button class="primary-btn" id="publishNow">发布到线上</button><button class="text-btn" id="pullNow">从线上拉取</button><button class="text-btn" id="downloadContent">下载内容文件</button></div>
+    <details class="publish-token" id="publishTokenBox"><summary>首次使用需填一次 GitHub Token</summary><input id="publishToken" type="password" placeholder="github_pat_…" autocomplete="off" /><small>只保存在这台电脑的浏览器里；权限只需该仓库的 Contents: Read and write。不想用 Token 就点「下载内容文件」，把文件交给助手推送。</small></details>`;
+  const anchor=family.querySelector('.homework-settings')||family.querySelector('.schedule-settings');
+  if(anchor)anchor.after(panel); else family.appendChild(panel);
+  document.getElementById('publishNow').onclick=publishToGitHub;
+  document.getElementById('pullNow').onclick=()=>pullRemoteContent(false);
+  document.getElementById('downloadContent').onclick=downloadContentFile;
+  const saved=localStorage.getItem(GH_TOKEN_KEY);
+  if(saved)document.getElementById('publishToken').value=saved;
+}
+ensurePublishPanel();
+setTimeout(()=>pullRemoteContent(true),600);
