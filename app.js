@@ -244,6 +244,8 @@ function applyRemoteContent(content){
   return changed;
 }
 async function pullRemoteContent(silent=true){
+  // 这台机器发布过，就是内容的来源端，自动拉取会把自己的改动冲掉，只允许手动拉取
+  if(silent&&data.sync&&data.sync.source)return false;
   try{
     const res=await fetch(`${CONTENT_PATH}?t=${Date.now()}`,{cache:'no-store'});
     if(!res.ok)return false;
@@ -277,7 +279,7 @@ async function publishToGitHub(){
     const res=await fetch(api,{method:'PUT',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(res.ok){
       const ts=Date.parse(content.updatedAt);
-      data.sync=data.sync||{};data.sync.tasksAt=ts;data.sync.homeworkAt=ts;data.sync.version=content.updatedAt;save();
+      data.sync=data.sync||{};data.sync.tasksAt=ts;data.sync.homeworkAt=ts;data.sync.version=content.updatedAt;data.sync.source=true;save();
       setPublishStatus(`已发布 ${new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}，约 1 分钟后 iPad 刷新可见`);
     }else if(res.status===401||res.status===403){
       setPublishStatus('Token 无效或没有该仓库的写权限');
