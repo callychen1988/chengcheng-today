@@ -102,6 +102,10 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
 @media (min-width:640px) and (max-width:900px){.hero{min-height:204px;padding:30px 34px}.hero h1{font-size:36px;margin:10px 0 8px}.hero-note{font-size:14px}}
 @media (max-width:639px){.hero{min-height:190px;padding:24px 22px}.hero h1{font-size:32px}.hero-note{font-size:14px}.sleep-pill{min-height:42px}}
 
+.homework-settings{margin-top:16px;padding:24px;background:#fbfaf6;border:1px solid var(--line);border-radius:16px}.homework-settings-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.homework-settings-status{color:#9a806f;font-size:12px;white-space:nowrap}.homework-card-readonly .homework-content{min-height:138px;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;white-space:pre-wrap;color:#4f5b53;font-size:14px;line-height:1.65}.homework-card-readonly .homework-content:empty::before{content:'家长还没有更新本周内容';color:var(--muted)}.homework-card-readonly .homework-file{margin-top:12px}
+@media (min-width:640px) and (max-width:900px){.homework-settings-grid{grid-template-columns:1fr 1fr}.homework-settings-grid .homework-card:last-child{grid-column:1/-1}}
+@media (max-width:639px){.homework-settings{padding:18px 14px}.homework-settings .schedule-settings-head{display:block}.homework-settings-status{display:block;margin-top:8px}.homework-settings-grid{grid-template-columns:1fr}}
+
 /* 模板套用与保存：把“初始化”和“编辑提交”分成两个明确步骤 */
 .template-kicker{display:block;color:#9a806f;font-size:10px;font-weight:800;letter-spacing:.12em;margin-bottom:6px}
 .template-summary{display:flex;align-items:center;gap:12px;margin:18px 0 22px;padding:15px 17px;border:1px solid #dfe8dc;border-radius:14px;background:#f4f8f1}
