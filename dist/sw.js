@@ -6,13 +6,13 @@
  * - 静态资源走 stale-while-revalidate，先秒开缓存、后台静默更新。
  * - 升级时只需要把 CACHE 版本号 +1，旧缓存会在 activate 阶段清掉。
  */
-const CACHE = 'chengcheng-v45';
+const CACHE = 'chengcheng-v47';
 
 const CORE_FILES = [
   './',
   './index.html',
-  './styles.css?v=36',
-  './app.js?v=24',
+  './styles.css?v=37',
+  './app.js?v=25',
   './manifest.json',
   './icon.svg',
   './icon-180.png',
