@@ -15,6 +15,63 @@ const keyOf=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`
 const weekdayOf=d=>(d.getDay()+6)%7;
 const parseKey=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
 const todayKey=()=>keyOf(today);
+// ── 每日一句 ───────────────────────────────────────────────
+// 主句 = 鼓励 / 成语 / 谚语；小字 = 意译的英文表达（不逐字翻译，求语气相通）
+// 取句用「日期序号 % 池长」：同一天刷新不变、隔天必换，且能把整池走完不重复
+const DAILY_LINES={
+  // 上学日：起步、方法、成语
+  work:[
+    ['先做第一件，后面的会跟上。','Start with one thing. The rest will follow.'],
+    ['慢慢来，比较快。','Slow is smooth; smooth is fast.'],
+    ['一次只做一件事。','One thing at a time.'],
+    ['不会的，正好是能学会的。','What you cannot do yet is what you are about to learn.'],
+    ['不积跬步，无以至千里。','A thousand miles begins with a single step.'],
+    ['把会做的先做掉，心就稳了。','Do the easy ones first, and your mind will settle.'],
+    ['认真做完一件，胜过匆匆忙忙做三件。','One thing done well beats three done in a rush.'],
+    ['磨刀不误砍柴工。','Sharpen the axe before you chop the wood.'],
+    ['读三遍，胜过记十遍。','Reading it three times beats memorizing it ten.'],
+    ['写字慢一点，就不用擦了。','Write a little slower, and erase a little less.'],
+    ['提前五分钟，心里就不慌。','Five minutes early means no panic.'],
+    ['先做完，再做好。','Get it done, then get it good.'],
+    ['疑问写在本子上，别留在心里。','Write your questions down. Do not keep them in your head.'],
+    ['想不起来，就翻回去看一眼。','If you forget, look back. That is allowed.'],
+    ['熟能生巧。','Practice makes perfect.'],
+    ['温故而知新。','Review the old, and learn the new.'],
+    ['不怕慢，就怕站。','Do not fear slow; fear standing still.'],
+    ['手比眼睛学得快。','Your hands learn faster than your eyes.'],
+    ['一步一步走，路自己会变短。','Step by step, the road shortens itself.'],
+    ['小事做好，大事不难。','Small things done well make big things easy.'],
+    ['今日事，今日毕。','Finish today what belongs to today.'],
+    ['自己安排的，记得更牢。','What you plan yourself, you remember longer.'],
+    ['今天做对一件，就很好。','One thing done right today is enough.'],
+    ['会等，也是一种本事。','Knowing how to wait is a skill too.'],
+    ['错了就改，改了就记住。','Fix the mistake, and it stays with you.'],
+    ['先看清，再下笔。','Look closely before you write.'],
+    ['涓涓细流，汇成江海。','Little streams make a river.'],
+    ['每天一点点，就是了不起。','A little every day adds up.']
+  ],
+  // 周末与假日：休息、自主、诗句
+  rest:[
+    ['今天先玩，也是安排的一部分。','Playing today is part of the plan.'],
+    ['休息好了，才能跑得更远。','Rest well, and you will run farther.'],
+    ['读闲书，不算浪费时间。','Reading for fun is never wasted time.'],
+    ['一张一弛，文武之道。','Work and rest both matter.'],
+    ['想做什么，自己决定就好。','You get to decide what today looks like.'],
+    ['会玩的人，也会学。','Those who play well learn well too.'],
+    ['今天的目标：玩得开心。','Today, the goal is simply to have a good time.'],
+    ['慢下来的日子，也在长个子。','Slow days help you grow too.'],
+    ['春天播种，秋天才有得收。','Sow in spring, and harvest in autumn.'],
+    ['睡饱了，明天才有力气。','Good sleep makes a strong tomorrow.'],
+    ['天光正好，出去走走。','The light is good. Go outside.'],
+    ['不着急，慢慢长大。','No rush. Grow at your own pace.']
+  ]
+};
+function dailyLine(d=today){
+  const stamp=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
+  const idx=Math.round((stamp-Date.UTC(2026,0,1))/86400000);
+  const pool=weekdayOf(d)>=5?DAILY_LINES.rest:DAILY_LINES.work;
+  return pool[((idx%pool.length)+pool.length)%pool.length];
+}
 // 模板永不记录“已完成”，避免上周末的勾选带到下一周
 const timeLabel=t=>t[1]?`${t[0]}—${t[1]}`:t[0]||'待安排';
 const templateFor=key=>(data.tasks[weekdayOf(parseKey(key))]||[]).map(t=>[t[0],t[1],t[2],t[3],false]);
@@ -27,14 +84,53 @@ if(data.custom.length){const list=ensureDay(todayKey());data.custom.forEach(c=>l
 document.getElementById('todayLabel').textContent=`今天 · ${today.getMonth()+1}月${today.getDate()}日 ${cnDays[day]}`;
 function syncHistory(){const list=todayTasks(),completed=list.filter(t=>t[4]),old=data.history.find(x=>x.date===todayKey()),record={date:todayKey(),label:`${today.getMonth()+1}月${today.getDate()}日 · ${cnDays[day]}`,completed:completed.length,total:list.length,items:completed.map(t=>t[2]),note:old?.note||''};if(old)Object.assign(old,record);else data.history.unshift(record);data.history=data.history.slice(0,30);save()}
 function updateTodayAdjust(){const key=todayKey(),on=hasOverride(key);const note=document.getElementById('todayAdjustNote'),restore=document.getElementById('restoreToday');if(!note||!restore)return;note.textContent=on?'今天用的是临时调整':'每天按固定模板走';note.classList.toggle('active',on);restore.classList.toggle('hidden',!on)}
-function renderToday(){const key=todayKey(),list=tasksFor(key),el=document.getElementById('todayTasks');el.innerHTML=list.length?list.map((t,i)=>`<div class="task-item ${t[4]?'done':''}"><button class="check" data-task="${i}" aria-label="${t[4]?'取消完成':'标记完成'}：${t[2]}">${t[4]?'✓':''}</button><span class="task-time">${timeLabel(t)}</span><span class="task-title">${t[2]}</span><span class="tag ${t[3]==='英语'?'green':''}">${t[3]}</span></div>`).join(''):'<div class="empty-state">今天没有安排，去玩一会儿吧。</div>';el.querySelectorAll('[data-task]').forEach(btn=>btn.onclick=()=>{const live=ensureDay(key),i=Number(btn.dataset.task);if(!live[i])return;live[i][4]=!live[i][4];save();renderToday();renderWeek()});const next=list.find(t=>!t[4]);document.getElementById('nextEvent').innerHTML=next?`<div class="next-time">${timeLabel(next)}</div><div class="next-title">${next[2]}</div><div class="next-sub">${next[3]} · 做完就休息</div>`:'<div class="next-time">完成啦</div><div class="next-title">今天的安排都做好了</div><div class="next-sub">可以放心去玩或阅读</div>';const done=list.filter(t=>t[4]).length;const progress=document.getElementById('taskProgress');if(progress)progress.textContent=list.length?`${done} / ${list.length} 已完成`:'今天没有任务';document.getElementById('dayMood').textContent=done?`今天已经完成 ${done} 件小事，都已经记录下来了。`:'把一件件小事做好，晚上就可以安心休息。';updateTodayAdjust();syncHistory()}
+function renderToday(){const key=todayKey(),list=tasksFor(key),el=document.getElementById('todayTasks'),line=dailyLine();const lineEl=document.getElementById('dayLine');if(lineEl)lineEl.textContent=line[0];el.innerHTML=list.length?list.map((t,i)=>`<div class="task-item ${t[4]?'done':''}"><button class="check" data-task="${i}" aria-label="${t[4]?'取消完成':'标记完成'}：${t[2]}">${t[4]?'✓':''}</button><span class="task-time">${timeLabel(t)}</span><span class="task-title">${t[2]}</span><span class="tag ${t[3]==='英语'?'green':''}">${t[3]}</span></div>`).join(''):'<div class="empty-state">今天没有安排，去玩一会儿吧。</div>';el.querySelectorAll('[data-task]').forEach(btn=>btn.onclick=()=>{const live=ensureDay(key),i=Number(btn.dataset.task);if(!live[i])return;live[i][4]=!live[i][4];save();renderToday();renderWeek()});const next=list.find(t=>!t[4]);document.getElementById('nextEvent').innerHTML=next?`<div class="next-time">${timeLabel(next)}</div><div class="next-title">${next[2]}</div><div class="next-sub">${next[3]} · 做完就休息</div>`:'<div class="next-time">完成啦</div><div class="next-title">今天的安排都做好了</div><div class="next-sub">可以放心去玩或阅读</div>';const done=list.filter(t=>t[4]).length;const progress=document.getElementById('taskProgress');if(progress)progress.textContent=list.length?`${done} / ${list.length} 已完成`:'今天没有任务';document.getElementById('dayMood').innerHTML=`<span class="en">${line[1]}</span>${done?`<span class="hero-done">${done} / ${list.length} done</span>`:''}`;updateTodayAdjust();syncHistory()}
 let weekOffset=0,weekEdit=false,keepWeekEdit=false;
 const weekStart=()=>{const b=new Date(today);b.setDate(today.getDate()-day+weekOffset*7);return b};
 function weekKeys(){const b=weekStart(),out=[];for(let i=0;i<7;i++){const d=new Date(b);d.setDate(b.getDate()+i);out.push(keyOf(d))}return out}
 const homeworkTypes=[['昂立英语','本周课程与课后作业','🟠'],['架子鼓','本周练习曲目与要求','🟢'],['舞蹈','本周动作练习与老师提醒','🟡']];
 function homeworkForWeek(){const key=weekKeys()[0];if(!data.homeworkWeeks[key])data.homeworkWeeks[key]={};return data.homeworkWeeks[key]}
 function ensureHomeworkSettings(){const family=document.getElementById('familyView');if(!family||document.getElementById('homeworkSettingsCards'))return;const block=document.createElement('div');block.className='homework-settings';block.innerHTML='<div class="schedule-settings-head"><div><h3>本周课外作业</h3><p>家长在这里更新昂立英语、架子鼓和舞蹈作业，孩子页面只负责查看。</p></div><span id="homeworkSettingsStatus" class="homework-settings-status">本周还没有上传附件</span></div><div id="homeworkSettingsCards" class="homework-settings-grid"></div>';family.querySelector('.schedule-settings')?.after(block)}
-function renderHomework(editable=false){const week=homeworkForWeek(),targetId=editable?'homeworkSettingsCards':'homeworkCards',cards=document.getElementById(targetId);if(!cards)return;cards.innerHTML=homeworkTypes.map((type,i)=>editable?`<article class="homework-card"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><textarea data-homework-text="${i}" maxlength="300" placeholder="家长把本周作业写在这里…"></textarea><label class="homework-upload">＋ 上传本周资料<input type="file" data-homework-file="${i}" accept="image/*,.pdf,.doc,.docx,.txt" /></label><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName||'还没有附件'}</div></article>`:`<article class="homework-card homework-card-readonly"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><div class="homework-content" data-homework-content="${i}"></div><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName?`已上传：${week[i].fileName}`:'本周还没有资料'}</div></article>`).join('');if(editable){cards.querySelectorAll('[data-homework-text]').forEach(input=>{input.value=week[Number(input.dataset.homeworkText)]?.text||'';input.oninput=()=>{const i=Number(input.dataset.homeworkText);week[i]={...(week[i]||{}),text:input.value};save()}});cards.querySelectorAll('[data-homework-file]').forEach(input=>input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const i=Number(input.dataset.homeworkFile),fileId=await putMedia(file);week[i]={...(week[i]||{}),fileId,fileName:file.name};save();renderHomework(true);renderHomework(false)}catch(error){alert('附件暂时没有保存成功，请稍后重试')}})}else cards.querySelectorAll('[data-homework-content]').forEach(content=>{const item=week[Number(content.dataset.homeworkContent)];content.textContent=item?.text||'家长还没有更新本周内容'});const attachmentCount=homeworkTypes.filter((_,i)=>week[i]?.fileName).length;const status=document.getElementById(editable?'homeworkSettingsStatus':'homeworkStatus');if(status)status.textContent=attachmentCount?`本周已上传 ${attachmentCount} 份资料`:'本周还没有上传附件'}
+const HW_NOTE_RE=/^[\u{1F53A}\u{1F4A1}\u{1F49C}\u{2764}\u{1F4CC}\u{1F514}\u{1F31F}\u{1F60A}\u26A0]/u;
+const HW_EMOJI_RE=/^[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}]/u;
+const HW_HEAD_RE=/^[一二三四五六七八九十]+\s*[、.．]/;
+const HW_MARK_RE=/^(?:\d{1,2}\s*[.、．)）]\s*|\d\ufe0f?\u20e3\s*|[（(]\d{1,2}[)）]\s*|[①②③④⑤⑥⑦⑧⑨⑩]\s*|[•·]\s*|[-*]\s+)/;
+const hwHash=text=>{let h=0;for(let i=0;i<text.length;i++)h=(h*31+text.charCodeAt(i))|0;return (h>>>0).toString(36)};
+function hwEsc(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function parseHomework(text){
+  const out=[];
+  String(text||'').split(/\r?\n/).forEach(raw=>{
+    const line=raw.replace(/^[\s\u3000]+|[\s\u3000]+$/g,'');
+    if(!line)return;
+    const last=out[out.length-1];
+    if(HW_MARK_RE.test(line)){const rest=line.replace(HW_MARK_RE,'').trim();out.push({type:'task',text:rest||line});return}
+    if(HW_HEAD_RE.test(line)){out.push({type:'head',text:line});return}
+    if(HW_NOTE_RE.test(line)){out.push({type:'note',text:line});return}
+    if(HW_EMOJI_RE.test(line)){out.push({type:'head',text:line});return}
+    if(last&&(last.type==='task'||last.type==='note')){last.text+=' '+line;return}
+    out.push({type:'task',text:line});
+  });
+  return out;
+}
+function homeworkParse(week,i){
+  const done=(week[i]||{}).done||{};
+  let n=0;
+  const blocks=parseHomework((week[i]||{}).text||'');
+  blocks.forEach(b=>{if(b.type==='task'){b.hash=hwHash(b.text+'#'+n);b.done=!!done[b.hash];n++}});
+  return {blocks,total:n,done:blocks.filter(b=>b.type==='task'&&b.done).length};
+}
+function homeworkBlocksHtml(week,i){
+  const {blocks,total,done}=homeworkParse(week,i);
+  if(!blocks.length)return '<div class="hw-empty">家长还没有更新本周内容</div>';
+  const bar=total?`<div class="hw-progress"><i style="width:${Math.round(done/total*100)}%"></i><span>已完成 ${done} / ${total}</span></div>`:'';
+  return bar+blocks.map(b=>b.type==='head'
+    ?`<div class="hw-section">${hwEsc(b.text)}</div>`
+    :b.type==='note'
+      ?`<div class="hw-note">${hwEsc(b.text)}</div>`
+      :`<button class="hw-task${b.done?' done':''}" data-hw-type="${i}" data-hw-hash="${b.hash}" aria-pressed="${b.done}"><span class="hw-check">✓</span><span class="hw-text">${hwEsc(b.text)}</span></button>`).join('');
+}
+function homeworkStats(week,i){const s=homeworkParse(week,i);return {tasks:s.total,done:s.done}}
+function renderHomework(editable=false){const week=homeworkForWeek(),targetId=editable?'homeworkSettingsCards':'homeworkCards',cards=document.getElementById(targetId);if(!cards)return;cards.innerHTML=homeworkTypes.map((type,i)=>editable?`<article class="homework-card"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><textarea data-homework-text="${i}" maxlength="300" placeholder="家长把本周作业写在这里…"></textarea><div class="hw-count" data-hw-count="${i}">写完后会自动拆成可勾选的任务</div><label class="homework-upload">＋ 上传本周资料<input type="file" data-homework-file="${i}" accept="image/*,.pdf,.doc,.docx,.txt" /></label><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName||'还没有附件'}</div></article>`:`<article class="homework-card homework-card-readonly"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><div class="hw-blocks">${homeworkBlocksHtml(week,i)}</div><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName?`已上传：${week[i].fileName}`:'本周还没有资料'}</div></article>`).join('');if(editable){cards.querySelectorAll('[data-homework-text]').forEach(input=>{const idx=Number(input.dataset.homeworkText);const refreshCount=()=>{const badge=cards.querySelector('[data-hw-count="'+idx+'"]');if(!badge)return;const st=homeworkStats(week,idx);badge.textContent=st.tasks?'已识别 '+st.tasks+' 条任务，孩子端可以直接点':'写完后会自动拆成可勾选的任务'};input.value=week[idx]?.text||'';refreshCount();input.oninput=()=>{week[idx]={...(week[idx]||{}),text:input.value};save();refreshCount()}});cards.querySelectorAll('[data-homework-file]').forEach(input=>input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const i=Number(input.dataset.homeworkFile),fileId=await putMedia(file);week[i]={...(week[i]||{}),fileId,fileName:file.name};save();renderHomework(true);renderHomework(false)}catch(error){alert('附件暂时没有保存成功，请稍后重试')}})}else cards.querySelectorAll('[data-hw-type]').forEach(btn=>{btn.onclick=()=>{const i=Number(btn.dataset.hwType),h=btn.dataset.hwHash,item=week[i]||(week[i]={});item.done=item.done||{};if(item.done[h])delete item.done[h];else item.done[h]=true;save();renderHomework(false)}});const attachmentCount=homeworkTypes.filter((_,i)=>week[i]?.fileName).length;const status=document.getElementById(editable?'homeworkSettingsStatus':'homeworkStatus');if(status)status.textContent=attachmentCount?`本周已上传 ${attachmentCount} 份资料`:'本周还没有上传附件'}
 function renderWeek(){const base=weekStart(),end=new Date(base);end.setDate(base.getDate()+6);const range=document.getElementById('weekRange');if(!range)return;range.textContent=`${weekOffset===0?'本周 · ':''}${base.getMonth()+1}月${base.getDate()}日—${end.getMonth()+1}月${end.getDate()}`;const cards=document.getElementById('weekCards');cards.classList.toggle('editing',weekEdit);const keys=weekKeys();cards.innerHTML=keys.map((k,i)=>{const d=parseKey(k),list=tasksFor(k),ov=hasOverride(k),isToday=k===todayKey();const head=`<div class="day-card-top"><div><div class="day-name">${cnDays[i]}</div><div class="day-number">${d.getDate()}</div></div></div>`;if(weekEdit){const rows=list.length?list.map((t,j)=>`<div class="day-edit-row"><input class="row-time" value="${escapeAttr(t[0])}" data-day-key="${k}" data-row="${j}" data-field="0" placeholder="17:50" aria-label="开始时间"><input class="row-end" value="${escapeAttr(t[1])}" data-day-key="${k}" data-row="${j}" data-field="1" placeholder="结束时间" aria-label="结束时间"><input class="row-title" value="${escapeAttr(t[2])}" data-day-key="${k}" data-row="${j}" data-field="2" placeholder="安排内容" aria-label="安排内容"><input class="row-tag" value="${escapeAttr(t[3])}" data-day-key="${k}" data-row="${j}" data-field="3" placeholder="类别" aria-label="类别"><button class="delete-day-task" data-del-key="${k}" data-row="${j}" aria-label="删除这一项">×</button></div>`).join(''):'<div class="schedule-empty">这一天还没有安排</div>';return `<div class="day-card ${isToday?'today':''} ${ov?'adjusted':''}" data-day-card="${k}">${head}${rows}<div class="day-edit-actions"><button class="mini-btn" data-add-key="${k}">＋ 加一项</button>${ov?`<button class="mini-btn ghost" data-restore-key="${k}">恢复固定</button>`:''}</div></div>`}const items=list.length?list.map(t=>`<div class="day-item"><strong>${timeLabel(t)} · ${t[3]}</strong>${t[2]}</div>`).join(''):'<div class="day-item empty">没有安排</div>';return `<div class="day-card ${isToday?'today':''} ${ov?'adjusted':''}" data-day-card="${k}">${head}${items}</div>`}).join('');bindWeekEditor(cards);const editBtn=document.getElementById('editWeek');if(editBtn){editBtn.textContent=weekEdit?'完成编辑':'编辑本周安排';editBtn.classList.toggle('active',weekEdit)}const restoreBtn=document.getElementById('restoreWeek');if(restoreBtn)restoreBtn.classList.toggle('hidden',!keys.some(hasOverride))}
 function focusDayCard(key){const card=document.querySelector(`[data-day-card="${key}"]`);if(!card)return;card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.add('flash');setTimeout(()=>card.classList.remove('flash'),2200)}
 function bindWeekEditor(cards){cards.querySelectorAll('[data-edit-key]').forEach(b=>b.onclick=()=>{weekEdit=true;renderWeek();focusDayCard(b.dataset.editKey)});cards.querySelectorAll('[data-add-key]').forEach(b=>b.onclick=()=>{const k=b.dataset.addKey;ensureDay(k).push(['','','新安排','活动',false]);save();renderWeek()});cards.querySelectorAll('[data-del-key]').forEach(b=>b.onclick=()=>{const list=ensureDay(b.dataset.delKey);list.splice(Number(b.dataset.row),1);save();renderWeek();renderToday()});cards.querySelectorAll('[data-restore-key]').forEach(b=>b.onclick=()=>restoreDay(b.dataset.restoreKey));cards.querySelectorAll('[data-day-key]').forEach(input=>input.addEventListener('change',()=>{const k=input.dataset.dayKey,row=ensureDay(k)[Number(input.dataset.row)];if(!row)return;row[Number(input.dataset.field)]=input.value;save();renderToday()}))}
