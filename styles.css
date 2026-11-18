@@ -187,9 +187,7 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
 @media (min-width:640px) and (max-width:1200px){.family-schedule-editor{grid-template-columns:1fr}}
 
 /* ===== 一周页工具栏：编辑本周安排 / 临时调整 / 恢复固定模板 ===== */
-.week-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px}
-.today-adjust-note{font-size:13px;color:var(--muted);line-height:1.5}
-.today-adjust-note.active{color:#a06048;font-weight:650}
+.week-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin:0 0 16px}
 .week-tool-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .mini-btn{min-height:44px;padding:0 15px;border-radius:11px;background:var(--sage-deep);color:#fff;font-size:13px;white-space:nowrap;transition:.18s}
 .mini-btn:hover{filter:brightness(1.04)}
