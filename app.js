@@ -401,6 +401,9 @@ function closeParentGate(){const m=document.getElementById('parentGate');if(m)m.
 function submitParentPin(){const inp=document.getElementById('parentPinInput'),hint=document.getElementById('parentPinHint');const v=((inp&&inp.value)||'').trim();if(!v){if(hint)hint.textContent='请输入密码';return}if(v!==parentPin()){if(hint)hint.textContent='密码不对，再试一次';if(inp){inp.value='';inp.focus()}return}const then=parentPinThen;parentUnlocked=true;closeParentGate();if(then)then()}
 function bindParentGate(){
   const close=document.querySelector('[data-close="parentGate"]');if(close)close.onclick=closeParentGate;
+  // 忘记密码时的自救：在弹窗标题上连点 5 次（3 秒内）把家长密码重置回 1234
+  const kick=document.querySelector('.parent-gate-card .section-kicker');
+  if(kick){let taps=0,timer=null;kick.onclick=()=>{taps++;clearTimeout(timer);timer=setTimeout(()=>{taps=0},3000);if(taps>=5){taps=0;clearTimeout(timer);if(!confirm('把家长密码重置为 1234 吗？'))return;saveParentPin('1234');const h=document.getElementById('parentPinHint'),i=document.getElementById('parentPinInput');if(h)h.textContent='已重置为 1234，重新输入即可';if(i){i.value='';i.focus()}toast('家长密码已重置为 1234')}}}
   const ok=document.getElementById('parentPinOk');if(ok)ok.onclick=submitParentPin;
   const inp=document.getElementById('parentPinInput');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submitParentPin()}});
   const setBtn=document.getElementById('saveParentPin');
