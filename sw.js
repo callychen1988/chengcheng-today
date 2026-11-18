@@ -11,8 +11,8 @@ const CACHE = 'chengcheng-v13';
 const CORE_FILES = [
   './',
   './index.html',
-  './styles.css',
-  './app.js',
+  './styles.css?v=13',
+  './app.js?v=13',
   './manifest.json',
   './icon.svg',
   './icon-180.png',

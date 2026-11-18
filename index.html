@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
   <link rel="icon" type="image/svg+xml" href="./icon.svg" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=13" />
 </head>
 <body>
   <div class="app-shell">
@@ -48,11 +48,20 @@
   </div>
   <div class="modal hidden" id="mistakeModal"><div class="modal-card"><button class="modal-close" data-close="mistakeModal">×</button><span class="section-kicker">NEW / 新错题</span><h2>记下来，下次就会了</h2><label>科目<input id="mistakeSubject" placeholder="例如：数学" /></label><label>我错在哪里<textarea id="mistakeText" placeholder="用自己的话写一写…"></textarea></label><button class="primary-btn full" id="saveMistake">保存错题</button></div></div>
   <div class="modal hidden" id="captureModal"><div class="modal-card capture-card"><button class="modal-close" data-close="captureModal">×</button><span class="section-kicker">CAPTURE / 记录</span><h2>拍下来，再想一想</h2><label>错题照片</label><div class="camera-actions"><button class="camera-btn" id="startCamera">⌾ 打开相机拍照</button><input id="mistakePhoto" class="hidden" type="file" accept="image/*" /></div><div id="cameraBox" class="camera-box hidden"><video id="cameraPreview" autoplay playsinline></video><button class="primary-btn full" id="takePhoto">拍下这道题</button></div><img id="photoPreview" class="photo-preview hidden" alt="错题预览" /><label>科目<input id="captureSubject" placeholder="例如：数学" /></label><label>我觉得错在哪里<textarea id="captureText" placeholder="可以直接用 iPad 键盘上的麦克风说一说…"></textarea></label><button class="guide-btn" id="guideThinking">✦ 帮我想一想</button><div id="guidePanel" class="guide-panel hidden"><div class="guide-disclaimer">只根据你说的话来提问，不看错题照片</div><div class="guide-step" id="guideStep"></div><div class="guide-question" id="guideQuestion"></div><textarea id="guideAnswer" placeholder="用自己的话说，不用担心说错…"></textarea><div class="guide-actions"><button class="text-btn" id="guideBack">上一步</button><button class="primary-btn" id="guideNext">下一步</button></div></div><label>这次我学到了<textarea id="learningFeedback" class="feedback-box" readonly placeholder="先写下自己的想法，这里会出现一句小提醒…"></textarea></label><button class="primary-btn full" id="saveCapture">保存这道错题</button><button id="recordReflection" class="hidden"></button><button id="addMistake" class="hidden"></button><span id="recordStatus" class="hidden"></span><audio id="reflectionAudio" class="hidden"></audio></div></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=13"></script>
   <script>
     if ('serviceWorker' in navigator) {
+      // 新版本接管后自动刷一次，避免出现「新页面结构 + 旧样式/旧脚本」的混搭
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        location.reload();
+      });
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+          .then(reg => reg.update().catch(() => {}))
+          .catch(() => {});
       });
     }
   </script>

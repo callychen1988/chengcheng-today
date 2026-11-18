@@ -292,13 +292,21 @@ function ensurePublishPanel(){
   panel.innerHTML=`<div class="publish-head"><div><h3>发布到 iPad</h3><p id="publishStatus">在这里改完安排和作业，点一下发布，iPad 打开就是最新的。</p></div></div>
     <div class="publish-actions"><button class="primary-btn" id="publishNow">发布到线上</button><button class="text-btn" id="pullNow">从线上拉取</button><button class="text-btn" id="downloadContent">下载内容文件</button></div>
     <details class="publish-token" id="publishTokenBox"><summary>首次使用需填一次 GitHub Token</summary><input id="publishToken" type="password" placeholder="github_pat_…" autocomplete="off" /><small>只保存在这台电脑的浏览器里；权限只需该仓库的 Contents: Read and write。不想用 Token 就点「下载内容文件」，把文件交给助手推送。</small></details>`;
-  const anchor=family.querySelector('.homework-settings')||family.querySelector('.schedule-settings');
-  if(anchor)anchor.after(panel); else family.appendChild(panel);
+  const homeworkBlock=family.querySelector('.homework-settings');
+  const scheduleBlock=family.querySelector('.schedule-settings');
+  if(homeworkBlock)homeworkBlock.before(panel);
+  else if(scheduleBlock)scheduleBlock.after(panel);
+  else family.appendChild(panel);
   document.getElementById('publishNow').onclick=publishToGitHub;
   document.getElementById('pullNow').onclick=()=>pullRemoteContent(false);
   document.getElementById('downloadContent').onclick=downloadContentFile;
   const saved=localStorage.getItem(GH_TOKEN_KEY);
   if(saved)document.getElementById('publishToken').value=saved;
 }
-ensurePublishPanel();
+function safeRun(label,fn){try{fn()}catch(e){console.warn('[init]',label,e)}}
+safeRun('publishPanel',ensurePublishPanel);
+safeRun('familyEditor',renderFamilyEditor);
+safeRun('homework',()=>{ensureHomeworkSettings();renderHomework(false)});
 setTimeout(()=>pullRemoteContent(true),600);
+// 兜底：页面从缓存恢复（back/forward、iOS 复用页面）时再渲染一次
+window.addEventListener('pageshow',e=>{if(e.persisted)safeRun('rerender',()=>{renderToday();renderFamilyEditor()})});
