@@ -4,7 +4,7 @@ const weeklyTemplate={0:[['17:50','18:30','到家 · 老人陪伴','家庭',fals
 const cloneTemplate=()=>JSON.parse(JSON.stringify(weeklyTemplate));
 const defaultData = {tasks:cloneTemplate(),days:{},custom:[],mistakes:[],history:[],homeworkWeeks:{},settings:{weekdayCare:'待确认',backupCare:'待确认',pickupNote:'',wakeTime:'07:00',sleepTime:'21:00'}};
 let data=JSON.parse(localStorage.getItem(STORE)||'null')||JSON.parse(JSON.stringify(defaultData));
-data.history=data.history||[]; data.mistakes=data.mistakes||[];
+data.history=data.history||[]; data.mistakes=data.mistakes||[]; data.english=data.english||{};
 // tasks = 固定周模板（按星期几）；days = 某一天（YYYY-MM-DD）的临时覆盖
 data.tasks=Object.assign({0:[],1:[],2:[],3:[],4:[],5:[],6:[]},data.tasks||{});
 data.days=data.days||{}; data.custom=data.custom||[]; data.homeworkWeeks=data.homeworkWeeks||{}; data.settings=data.settings||{};
@@ -148,8 +148,26 @@ function restoreTodayOverride(){const key=todayKey();if(!hasOverride(key))return
 function bindWeekTools(){const edit=document.getElementById('editWeek');if(edit)edit.onclick=toggleWeekEdit;const rw=document.getElementById('restoreWeek');if(rw)rw.onclick=restoreWeekOverrides;const rt=document.getElementById('restoreToday');if(rt)rt.onclick=restoreTodayOverride;updateTodayAdjust()}
 function bindWeekEditor(cards){cards.querySelectorAll('[data-edit-key]').forEach(b=>b.onclick=()=>{weekEdit=true;renderWeek();focusDayCard(b.dataset.editKey)});cards.querySelectorAll('[data-add-key]').forEach(b=>b.onclick=()=>{const k=b.dataset.addKey;ensureDay(k).push(['','','新安排','活动',false]);save();renderWeek()});cards.querySelectorAll('[data-del-key]').forEach(b=>b.onclick=()=>{const list=ensureDay(b.dataset.delKey);list.splice(Number(b.dataset.row),1);save();renderWeek();renderToday()});cards.querySelectorAll('[data-restore-key]').forEach(b=>b.onclick=()=>restoreDay(b.dataset.restoreKey));cards.querySelectorAll('[data-day-key]').forEach(input=>input.addEventListener('change',()=>{const k=input.dataset.dayKey,row=ensureDay(k)[Number(input.dataset.row)];if(!row)return;row[Number(input.dataset.field)]=input.value;save();renderToday();renderWeek()}))}
 function restoreDay(key){if(!hasOverride(key))return;const d=parseKey(key);if(!confirm(`${d.getMonth()+1}月${d.getDate()}日（${cnDays[weekdayOf(d)]}）的临时调整会取消，回到固定模板。确定吗？`))return;delete data.days[key];save();renderWeek();renderToday();toast('已恢复固定安排')}
-function renderEnglish(){const cards=[['🎧','英语听力','10分钟 · 每周5—6次','本周已完成 2 次','38%'],['📖','英文绘本','10—15分钟 · 每周3次','本周已完成 1 次','33%'],['✦','单词复习','5—8分钟 · 每周4次','本周已完成 2 次','50%']];document.getElementById('englishCards').innerHTML=cards.map((x,i)=>`<article class="learning-card"><div class="learning-icon">${x[0]}</div><h3>${x[1]}</h3><p>${x[2]}<br/>${x[3]}</p><div class="progress"><i style="width:${x[4]}"></i></div><button data-english="${i}">今天完成一小次 →</button></article>`).join('');document.querySelectorAll('[data-english]').forEach(b=>b.onclick=()=>{b.textContent='已记下，做得好 ✓';b.style.color='#557565'})}
-async function renderMistakes(){const el=document.getElementById('mistakeList');if(!data.mistakes.length){el.innerHTML='<div class="empty-state">还没有错题。发现不会的，拍下来就好。</div>';return}el.innerHTML=data.mistakes.map((m,i)=>`<article class="mistake-card ${m.photoId?'has-media':''}"><div class="mistake-photo-wrap ${m.photoId?'':'hidden'}"><img data-mistake-photo="${i}" alt="${m.subject||'错题'}照片" /></div><div class="mistake-content"><div class="mistake-title-row"><h3>${m.subject}</h3><span class="mistake-meta">${m.date}</span></div><p>${m.text}</p>${m.learning?`<div class="mistake-learning"><span>这次我学到了</span>${m.learning}</div>`:''}</div><button class="remove-mistake" data-remove="${i}" aria-label="删除这道错题">删除</button></article>`).join('');for(const image of el.querySelectorAll('[data-mistake-photo]')){const item=data.mistakes[Number(image.dataset.mistakePhoto)];try{const blob=await getMedia(item.photoId);if(blob)image.src=URL.createObjectURL(blob);else image.closest('.mistake-photo-wrap').classList.add('hidden')}catch(error){image.closest('.mistake-photo-wrap').classList.add('hidden')}}el.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{data.mistakes.splice(Number(b.dataset.remove),1);save();renderMistakes()})}
+const ENGLISH_GOALS=[['🎧','英语听力','10分钟 · 每周5—6次',5],['📖','英文绘本','10—15分钟 · 每周3次',3],['✦','单词复习','5—8分钟 · 每周4次',4]];
+const englishTodayCount=i=>{const rec=data.english[todayKey()];return Array.isArray(rec)?(Number(rec[i])||0):0};
+const englishWeekCount=i=>{const b=new Date(today);b.setDate(today.getDate()-day);let n=0;for(let k=0;k<7;k++){const d=new Date(b);d.setDate(b.getDate()+k);const rec=data.english[keyOf(d)];if(Array.isArray(rec))n+=Number(rec[i])||0}return n};
+function renderEnglish(){
+  const el=document.getElementById('englishCards');
+  if(!el)return;
+  el.innerHTML=ENGLISH_GOALS.map((x,i)=>{
+    const week=englishWeekCount(i),goal=x[3],pct=goal?Math.min(100,Math.round(week/goal*100)):0,today=englishTodayCount(i);
+    return `<article class="learning-card"><div class="learning-icon">${x[0]}</div><h3>${x[1]}</h3><p>${x[2]}<br/>本周已完成 ${week} 次</p><div class="progress"><i style="width:${pct}%"></i></div><button data-english="${i}">${today?`今天已完成 ${today} 次 →`:'今天完成一小次 →'}</button></article>`;
+  }).join('');
+  el.querySelectorAll('[data-english]').forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.english),key=todayKey();
+    const rec=Array.isArray(data.english[key])?data.english[key].slice():[0,0,0];
+    while(rec.length<3)rec.push(0);
+    rec[i]=(Number(rec[i])||0)+1;
+    data.english[key]=rec;
+    save();renderEnglish();
+    toast(`已记下：${ENGLISH_GOALS[i][1]}，本周第 ${englishWeekCount(i)} 次`);
+  });
+}
 function renderGrowth(){const total=data.history.reduce((n,x)=>n+x.completed,0),days=data.history.filter(x=>x.completed>0).length;document.getElementById('growthSummary').innerHTML=`<div class="growth-number">${total}</div><div class="growth-copy"><b>件小事，已经被你完成</b><p>你在 ${days} 天里留下了自己的脚印。每一次勾选，都是在照顾自己的节奏。</p></div>`;document.getElementById('growthNote').value=data.history.find(x=>x.date===todayKey())?.note||'';document.getElementById('growthList').innerHTML=data.history.filter(x=>x.completed||x.note).slice(0,7).map(x=>`<article class="growth-day"><div class="growth-day-head"><b>${x.label}</b><span>${x.completed} 件完成</span></div><div class="growth-items">${x.items.map(i=>`<span class="growth-item">✓ ${i}</span>`).join('')||'<span class="growth-item">今天也有好好照顾自己</span>'}</div>${x.note?`<p class="growth-note-text">“${x.note}”</p>`:''}</article>`).join('')||'<div class="empty-state">完成第一件小事后，这里会留下你的记录。</div>'}
 function showView(name){document.querySelectorAll('main>section').forEach(s=>s.classList.add('hidden'));if(name==='today'){['todayView','todayScheduleView','todayQuickNav'].forEach(id=>document.getElementById(id)?.classList.remove('hidden'));renderToday()}else document.getElementById(name+'View').classList.remove('hidden');document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='week'){if(!keepWeekEdit)weekEdit=false;keepWeekEdit=false;renderWeek()}if(name==='chinese'){}if(name==='homework')renderHomework(false);if(name==='family'){ensureHomeworkSettings();renderHomework(true)}if(name==='english')renderEnglish();if(name==='mistakes')renderMistakes();if(name==='growth')renderGrowth()}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
