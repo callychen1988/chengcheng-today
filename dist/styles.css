@@ -372,3 +372,31 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
 #todayTasks.is-scrollable{-webkit-mask-image:linear-gradient(#000 calc(100% - 26px),rgba(0,0,0,.18));mask-image:linear-gradient(#000 calc(100% - 26px),rgba(0,0,0,.18));padding-bottom:8px}
 /* ===== 首屏适配 · END ===== */
 
+/* ===== 勾选圆点：改用 SVG 描边，视觉居中不再受字体字形影响 ===== */
+.check svg{width:19px;height:19px;display:block}
+.check svg path{fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
+.hw-check svg{width:14px;height:14px;display:block}
+.hw-check svg path{fill:none;stroke:currentColor;stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== 任务列表右侧留出滚动条位置，右侧标签不再被压住 ===== */
+#todayTasks.is-scrollable{padding-right:10px}
+
+/* ===== 「加一件自己的小事」贴在「接下来」卡片底部 ===== */
+.next-panel .add-row{margin-top:auto;padding-top:14px;border-top:1px dashed #e6d9cb;display:flex;gap:8px;align-items:center}
+.next-panel .add-row input{min-height:40px;font-size:13px;padding:7px 11px;border-radius:10px;flex:1;min-width:0}
+.next-panel .add-row button{min-height:40px;font-size:13px;padding:0 14px;flex:none;border-radius:10px}
+
+/* 平板竖屏窄档（如 iPad mini 744px）：单列但保留「接下来」卡片，
+   否则贴着它的添加入口会一起被隐藏，孩子就没地方加小事了 */
+@media (min-width:640px) and (max-width:780px){
+  .next-panel{display:flex}
+  .next-panel .add-row{margin-top:18px}
+}
+
+/* 窄右侧栏（平板竖屏等 ≤900px 两列时，右栏只有 200 多像素）：
+   输入框与按钮改为上下排列，时间也不再折成两行 */
+@media (max-width:900px){
+  .next-panel .add-row{flex-direction:column;align-items:stretch;gap:8px}
+  .next-panel .add-row button{width:100%}
+  .next-time{font-size:26px;white-space:nowrap}
+}
