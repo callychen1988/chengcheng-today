@@ -1,0 +1,8 @@
+# 本地工作目录与临时产物（不进发布仓库）
+.workbuddy/
+outputs/
+work/
+tools/
+*.zip
+*.genie
+dist/content.json
