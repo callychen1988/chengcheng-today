@@ -16,12 +16,26 @@ const hasAnySchedule=()=>Object.values(data.tasks||{}).some(list=>Array.isArray(
 if(!hasAnySchedule()&&!data.settings.weekTemplateApplied){data.tasks=cloneTemplate();data.settings.weekTemplateApplied=true;localStorage.setItem(STORE,JSON.stringify(data))}
 const save=()=>localStorage.setItem(STORE,JSON.stringify(data));
 function toast(message){let el=document.getElementById('ccToast');if(!el){el=document.createElement('div');el.id='ccToast';el.className='cc-toast';document.body.appendChild(el)}el.textContent=message;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),1900)}
-const today=new Date(); const day=(today.getDay()+6)%7; const cnDays=['周一','周二','周三','周四','周五','周六','周日'];
+let today=new Date(); let day=(today.getDay()+6)%7; const cnDays=['周一','周二','周三','周四','周五','周六','周日'];
 const pad2=n=>String(n).padStart(2,'0');
 const keyOf=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 const weekdayOf=d=>(d.getDay()+6)%7;
 const parseKey=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
 const todayKey=()=>keyOf(today);
+function refreshDateIfChanged(){
+  const now=new Date();
+  if(keyOf(now)===keyOf(today))return false;
+  today=now;
+  day=(today.getDay()+6)%7;
+  weekOffset=0;
+  weekEdit=false;
+  keepWeekEdit=false;
+  renderToday();
+  renderWeek();
+  renderHomework(false);
+  renderGrowth();
+  return true;
+}
 // ── 每日一句 ───────────────────────────────────────────────
 // 主句 = 鼓励 / 成语 / 谚语；小字 = 意译的英文表达（不逐字翻译，求语气相通）
 // 取句用「日期序号 % 池长」：同一天刷新不变、隔天必换，且能把整池走完不重复
@@ -225,6 +239,7 @@ document.getElementById('addTask').onclick=()=>{const input=document.getElementB
 document.getElementById('addMistake').onclick=()=>document.getElementById('mistakeModal').classList.remove('hidden');document.querySelector('[data-close="mistakeModal"]').onclick=()=>document.getElementById('mistakeModal').classList.add('hidden');document.getElementById('saveMistake').onclick=()=>{const subject=document.getElementById('mistakeSubject').value.trim()||'待整理',text=document.getElementById('mistakeText').value.trim()||'还没写下错因';data.mistakes.unshift({subject,text,date:'刚刚'});save();document.getElementById('mistakeModal').classList.add('hidden');document.getElementById('mistakeSubject').value='';document.getElementById('mistakeText').value='';renderMistakes()};
 function loadSettings(){const g=id=>document.getElementById(id);const w=g('weekdayCare'),b=g('backupCare'),p=g('pickupNote');if(w)w.value=data.settings.weekdayCare||'待确认';if(b)b.value=data.settings.backupCare||'待确认';if(p)p.value=data.settings.pickupNote||'';const wk=g('wakeTime'),sl=g('sleepTime');if(wk)wk.value=data.settings.wakeTime||'07:00';if(sl)sl.value=data.settings.sleepTime||'21:00'}document.getElementById('saveGrowthNote').onclick=()=>{let record=data.history.find(x=>x.date===todayKey());if(!record){syncHistory();record=data.history.find(x=>x.date===todayKey())}record.note=document.getElementById('growthNote').value.trim();save();renderGrowth()};document.getElementById('saveHomework').onclick=()=>{save();const status=document.getElementById('homeworkStatus');if(status)status.textContent='本周作业已保存';};document.getElementById('openSettings').onclick=()=>enterFamily();
 renderToday();loadSettings();ensureHomeworkSettings();renderHomework(false);document.querySelector('#homeworkView .homework-footer')?.remove();const familyNav=document.querySelector('.bottom-nav button[data-view="family"]');if(familyNav)familyNav.innerHTML='<span aria-hidden="true">♡</span>设置';const familyView=document.getElementById('familyView');if(familyView){familyView.querySelector('.section-kicker').textContent='SETTINGS / 设置';familyView.querySelector('h2').textContent='家长设置'}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDateIfChanged()});window.addEventListener('focus',refreshDateIfChanged);window.addEventListener('pageshow',refreshDateIfChanged);setInterval(refreshDateIfChanged,60000);
 
 // 图片和录音放进 IndexedDB，避免占用 localStorage 的小容量配额。
 const mediaDb=(()=>new Promise((resolve,reject)=>{const request=indexedDB.open('chengcheng-media-v1',1);request.onupgradeneeded=()=>request.result.createObjectStore('media');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}))();
