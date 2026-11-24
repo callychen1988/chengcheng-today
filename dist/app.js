@@ -229,7 +229,7 @@ function renderEnglish(){
     rec[i]=(Number(rec[i])||0)+1;
     data.english[key]=rec;
     save();renderEnglish();
-    toast(`已记下：${ENGLISH_GOALS[i][1]}，本周第 ${englishWeekCount(i)} 次`);
+    awardEnglishPoints(i, true);
   });
 }
 async function renderMistakes(){const el=document.getElementById('mistakeList');if(!data.mistakes.length){el.innerHTML='<div class="empty-state">还没有错题。发现不会的，拍下来就好。</div>';return}el.innerHTML=data.mistakes.map((m,i)=>`<article class="mistake-card ${m.photoId?'has-media':''}"><div class="mistake-photo-wrap ${m.photoId?'':'hidden'}"><img data-mistake-photo="${i}" alt="${m.subject||'错题'}照片" /></div><div class="mistake-content"><div class="mistake-title-row"><h3>${m.subject}</h3><span class="mistake-meta">${m.date}</span></div><p>${m.text}</p>${m.learning?`<div class="mistake-learning"><span>这次我学到了</span>${m.learning}</div>`:''}</div><button class="remove-mistake" data-remove="${i}" aria-label="删除这道错题">删除</button></article>`).join('');for(const image of el.querySelectorAll('[data-mistake-photo]')){const item=data.mistakes[Number(image.dataset.mistakePhoto)];try{const blob=await getMedia(item.photoId);if(blob)image.src=URL.createObjectURL(blob);else image.closest('.mistake-photo-wrap').classList.add('hidden')}catch(error){image.closest('.mistake-photo-wrap').classList.add('hidden')}}el.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{data.mistakes.splice(Number(b.dataset.remove),1);save();renderMistakes()})}
@@ -452,6 +452,7 @@ const POINT_RULES = [
   ['课外班：鼓 / 舞蹈 / 昂立', 2],
   ['生活自理：书包、桌面', 1],
   ['自己加的小事', 1, '每天最多 2 分'],
+  ['英语听力 / 绘本 / 单词', 1, '每项每天一次'],
   ['一天全部做完', 3, '额外奖励']
 ];
 
@@ -750,9 +751,32 @@ function renderPrizeSettings() {
   };
 }
 
+// 英语小天地：次数照旧累加，积分按「每项每天一次」给，点多少下都不重复加
+function awardEnglishPoints(i, withToast) {
+  const key = todayKey(), goal = ENGLISH_GOALS[i] || [], name = goal[1] || '英语';
+  const got = awardPoints(`en|${key}|${i}`, name, 1, 'task');
+  const times = englishWeekCount(i);
+  if (withToast) {
+    const tail = got > 0 ? `+${got} 分` : (hasPointId(`en|${key}|${i}`) ? '这项今天的分已经记过了' : `今天的分攒满了（${POINTS_DAY_CAP} 分）`);
+    toast(`已记下：${name}，本周第 ${times} 次 · ${tail}`);
+  }
+  renderPointsBadge();
+  if (got > 0) bumpPill();
+  save(); // 页面上的 save() 在加分之前，这里必须再存一次，否则分只在内存里
+  renderPointsLive();
+  return got;
+}
+function backfillEnglishPoints() {
+  const key = todayKey(), rec = data.english && data.english[key];
+  if (!Array.isArray(rec)) return;
+  ENGLISH_GOALS.forEach((g, i) => { if (Number(rec[i]) > 0) awardPoints(`en|${key}|${i}`, g[1], 1, 'task'); });
+  save();
+}
+
 function initPoints() {
   pointsStore();
   backfillTodayPoints();
+  backfillEnglishPoints();
   renderPointsBadge();
   renderPoints();
   renderPrizeSettings();
