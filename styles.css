@@ -62,7 +62,7 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
   .topbar{height:72px}.brand-mark{width:40px;height:40px}.brand span:not(.brand-mark){display:none}.icon-btn,.avatar{width:44px;height:44px}
   .hero{min-height:218px;padding:28px 24px;display:block}.hero h1{font-size:34px;margin-top:12px}.hero-note{font-size:14px}.sleep-pill{display:inline-flex;margin-top:18px;min-height:44px}
   .today-grid{grid-template-columns:1fr}.next-panel{display:none}.panel{padding:21px 18px}.panel-heading{gap:12px}.panel h2,.view h2{font-size:21px}.panel-actions{align-items:flex-end}.task-progress{font-size:11px}.panel-actions .text-btn{font-size:12px}
-  .task-item{display:grid;grid-template-columns:44px 58px minmax(0,1fr);gap:9px}.task-time{width:auto;font-size:12px}.task-title{font-size:15px}.tag{display:none}
+  .task-item{display:grid;grid-template-columns:44px auto minmax(0,1fr);gap:9px}.task-time{width:auto;font-size:12px}.task-title{font-size:15px}.tag{display:none}
   .add-row{display:grid;grid-template-columns:minmax(0,1fr) 72px}.add-row button{padding:0 12px}
   .quick-nav{grid-template-columns:1fr 1fr;gap:10px}.quick-nav button{min-height:112px;padding:15px;align-items:flex-start;flex-wrap:wrap}.quick-nav .nav-icon{width:40px;height:40px}.quick-nav button>span:nth-child(2){width:calc(100% - 54px)}.quick-nav small{font-size:11px}.quick-nav .chevron{display:none}
   .view{padding:22px 17px}.view-header{gap:12px}.view-header .soft-badge{display:none}.week-switch{font-size:12px}.week-switch button{width:40px;height:40px}.week-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.week-cards .day-card:last-child{grid-column:1/-1}.day-card{min-height:170px}
@@ -343,3 +343,99 @@ body{min-width:320px;line-height:1.5;-webkit-tap-highlight-color:transparent}
   .next-panel .add-row button{width:100%}
   .next-time{font-size:26px;white-space:nowrap}
 }
+
+/* ===== 积分与兑换（demo） ===== */
+.points-pill{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 15px 0 7px;border-radius:99px;background:#fffaf0;border:1px solid #ecdcb8;color:#8a6a2e;font-size:14px;font-weight:700;transition:.18s}
+.points-pill b{font-size:15px;letter-spacing:-.01em}
+.points-pill .pp-coin{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:linear-gradient(140deg,#f8e2aa,#e8bd6a);color:#7d5c22;font-size:13px;line-height:1}
+.points-pill:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(196,160,88,.22)}
+.points-pill.bump{animation:ppBump .46s ease}
+@keyframes ppBump{0%{transform:scale(1)}36%{transform:scale(1.11)}100%{transform:scale(1)}}
+
+.pts-hero{display:flex;align-items:center;justify-content:space-between;gap:26px;flex-wrap:wrap;padding:26px 28px;border-radius:20px;border:1px solid #ecdfc4;background:linear-gradient(118deg,#fdf3dc 0%,#eef3e6 100%)}
+.pts-hero-main{display:flex;align-items:center;gap:18px;min-width:0}
+.pts-coin{display:grid;place-items:center;width:56px;height:56px;flex:none;border-radius:50%;background:linear-gradient(140deg,#fbe8b4,#e6b962);color:#7d5c22;font-size:24px;box-shadow:0 8px 20px rgba(196,160,88,.28)}
+.pts-balance{display:flex;align-items:baseline;gap:5px}
+.pts-balance b{font-size:52px;line-height:.95;letter-spacing:-.05em;color:#8a5f2b;font-weight:700}
+.pts-balance small{font-size:14px;color:#a58a5f}
+.pts-hint{margin:9px 0 0;font-size:13px;color:#8b7a5e;line-height:1.5}
+.pts-goal{display:block;width:210px;max-width:100%;height:5px;margin-top:12px;border-radius:99px;background:rgba(255,255,255,.75);overflow:hidden}
+.pts-goal i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#e3bf78,#c79f52);transition:width .35s}
+.pts-goal.hidden{display:none}
+.pts-stats{display:flex;gap:26px}
+.pts-stats div{text-align:center}
+.pts-stats b{display:block;font-size:22px;color:var(--sage-deep);letter-spacing:-.02em}
+.pts-stats span{font-size:11px;color:#8c9188;letter-spacing:.05em}
+
+.prize-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.prize-card{position:relative;display:flex;flex-direction:column;gap:7px;padding:18px 17px;border-radius:16px;border:1px solid var(--line);background:#fbfaf6;text-align:left;transition:.18s}
+.prize-card .prize-icon{font-size:24px;line-height:1}
+.prize-count{position:absolute;top:12px;right:12px;font-size:10px;color:#a3906c;background:#f4ecdc;border-radius:99px;padding:3px 8px;line-height:1.3}
+.prize-card h4{margin:2px 0 0;font-size:14px;line-height:1.35}
+.prize-card .prize-note{font-size:11px;color:#8c9188;line-height:1.5;min-height:31px}
+.prize-card .prize-bar{height:4px;border-radius:99px;background:#efeade;overflow:hidden;margin-top:2px}
+.prize-card .prize-bar i{display:block;height:100%;border-radius:99px;background:#dcbb79;transition:width .3s}
+.prize-card .prize-cost{font-size:12px;font-weight:700;color:#9b8459}
+.prize-card.ready{border-color:#dcc78c;background:#fffdf3;box-shadow:0 12px 26px rgba(198,162,90,.16)}
+.prize-card.ready .prize-cost{color:var(--sage-deep)}
+.prize-card.ready:hover{transform:translateY(-2px)}
+.prize-card:active{transform:scale(.985)}
+
+.rule-grid{display:flex;flex-wrap:wrap;gap:8px}
+.rule-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6f796f;background:#edf3eb;border-radius:9px;padding:8px 11px;line-height:1.4}
+.rule-chip b{color:var(--sage-deep);font-size:13px}
+.rule-chip em{font-style:normal;font-size:11px;color:#9aa197;margin-left:2px}
+
+.pts-ledger{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pts-ledger .empty-state{background:#fbfaf6;padding:40px 20px}
+.pts-day{grid-column:1/-1;display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:11px 16px 3px;background:#fbfaf6;font-size:11px;letter-spacing:.1em;color:#9aa197}
+.pts-day b{font-size:12px;letter-spacing:0;color:#a8863f;font-variant-numeric:tabular-nums}
+.pts-note{grid-column:1/-1;padding:0 16px 8px;background:#fbfaf6;font-size:12px;color:#8b7a5e;line-height:1.6}
+.pts-tip{margin:10px 0 0;font-size:11px;color:var(--muted);line-height:1.6}
+.pts-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:#fbfaf6;font-size:13px}
+.pts-row .pts-when{width:62px;flex:none;font-size:11px;color:#a9ada5;font-variant-numeric:tabular-nums}
+.pts-row .pts-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pts-row .pts-val{flex:none;font-weight:700;color:var(--sage-deep);font-variant-numeric:tabular-nums}
+.pts-row.minus .pts-name{color:#8c7a6e}
+.pts-row.minus .pts-val{color:#b0866d}
+.pts-foot{margin-top:20px;text-align:right}
+
+@media (min-width:640px) and (max-width:900px){
+  .prize-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:639px){
+  .points-pill{height:36px;padding:0 12px 0 6px;font-size:13px}
+  .points-pill .pp-coin{width:22px;height:22px;font-size:11px}
+  .pts-hero{padding:20px 18px;gap:18px;flex-direction:column;align-items:flex-start}
+  .pts-balance b{font-size:44px}
+  .pts-coin{width:48px;height:48px;font-size:20px}
+  .pts-stats{width:100%;justify-content:space-between;gap:10px}
+  .prize-grid{grid-template-columns:1fr}
+  .prize-card .prize-note{min-height:0}
+  .pts-row .pts-when{width:52px}
+}
+/* 底部导航多了一格：手机上改成等分，6 项都不挤 */
+@media (max-width:639px){
+  .bottom-nav button{width:auto;flex:1 1 0;min-width:0}
+}
+
+/* ===== 家长端：积分礼品编辑 ===== */
+.prize-settings .schedule-settings-head p{margin-bottom:14px}
+.prize-edit-list{display:grid;gap:8px}
+.prize-edit-row{display:grid;grid-template-columns:minmax(120px,1fr) 86px minmax(120px,1.4fr) 40px;gap:8px;align-items:center}
+.prize-edit-row input{min-width:0;min-height:44px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;background:#fff;color:var(--ink)}
+.prize-edit-row input[type=number]{text-align:center;font-variant-numeric:tabular-nums}
+.prize-del{width:40px;height:44px;border-radius:9px;background:#fff1eb;color:#aa6d55;font-size:17px;line-height:1}
+.prize-settings-note{margin:12px 0 0;font-size:11px;color:var(--muted);line-height:1.6}
+@media (max-width:639px){
+  .prize-edit-row{grid-template-columns:minmax(0,1fr) 76px 40px}
+  .prize-edit-row [data-pd]{grid-column:1/3;grid-row:2}
+}
+
+/* ===== 一周卡片：当天得分角标 ===== */
+.day-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.day-pts{flex:none;font-size:11px;font-weight:700;color:#a8863f;background:#f7ecd2;border-radius:99px;padding:3px 8px;line-height:1.4;font-variant-numeric:tabular-nums}
+
+/* ===== 积分台账：展开更早记录 ===== */
+.pts-more{grid-column:1/-1;width:100%;padding:13px 16px;background:#f6f3ea;color:var(--sage-deep);font-size:12px;text-align:center;border-radius:0 0 13px 13px}
+.pts-more:hover{background:#f1eee2}

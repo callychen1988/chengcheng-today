@@ -16,12 +16,27 @@ const hasAnySchedule=()=>Object.values(data.tasks||{}).some(list=>Array.isArray(
 if(!hasAnySchedule()&&!data.settings.weekTemplateApplied){data.tasks=cloneTemplate();data.settings.weekTemplateApplied=true;localStorage.setItem(STORE,JSON.stringify(data))}
 const save=()=>localStorage.setItem(STORE,JSON.stringify(data));
 function toast(message){let el=document.getElementById('ccToast');if(!el){el=document.createElement('div');el.id='ccToast';el.className='cc-toast';document.body.appendChild(el)}el.textContent=message;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),1900)}
-const today=new Date(); const day=(today.getDay()+6)%7; const cnDays=['周一','周二','周三','周四','周五','周六','周日'];
+let today=new Date(); let day=(today.getDay()+6)%7; const cnDays=['周一','周二','周三','周四','周五','周六','周日'];
 const pad2=n=>String(n).padStart(2,'0');
 const keyOf=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 const weekdayOf=d=>(d.getDay()+6)%7;
 const parseKey=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
 const todayKey=()=>keyOf(today);
+function refreshDateIfChanged(){
+  const now=new Date();
+  if(keyOf(now)===keyOf(today))return false;
+  today=now;
+  day=(today.getDay()+6)%7;
+  weekOffset=0;
+  weekEdit=false;
+  keepWeekEdit=false;
+  renderToday();
+  renderWeek();
+  renderHomework(false);
+  renderGrowth();
+  renderPoints();
+  return true;
+}
 // ── 每日一句 ───────────────────────────────────────────────
 // 主句 = 鼓励 / 成语 / 谚语；小字 = 意译的英文表达（不逐字翻译，求语气相通）
 // 取句用「日期序号 % 池长」：同一天刷新不变、隔天必换，且能把整池走完不重复
@@ -93,7 +108,7 @@ function syncHistory(){const list=todayTasks(),completed=list.filter(t=>t[4]),ol
 const taskSig=list=>JSON.stringify((list||[]).map(t=>[t[0],t[1],t[2],t[3]]));
 const hasContentOverride=key=>Array.isArray(data.days[key])&&taskSig(data.days[key])!==taskSig(templateFor(key));
 function updateTodayAdjust(){const restore=document.getElementById('restoreToday');if(!restore)return;restore.classList.toggle('hidden',!hasContentOverride(todayKey()))}
-function renderToday(){const key=todayKey(),list=tasksFor(key),el=document.getElementById('todayTasks'),line=dailyLine();const todayLabelEl=document.getElementById('todayLabel');if(todayLabelEl)todayLabelEl.textContent=`今天 · ${today.getMonth()+1}月${today.getDate()}日 ${cnDays[day]}`;const lineEl=document.getElementById('dayLine');if(lineEl)lineEl.textContent=line[0];el.innerHTML=list.length?list.map((t,i)=>`<div class="task-item ${t[4]?'done':''}"><button class="check" data-task="${i}" aria-label="${t[4]?'取消完成':'标记完成'}：${t[2]}">${t[4]?"<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M5 12.6 9.7 17.2 19 7.8'/></svg>":''}</button><span class="task-time">${timeLabel(t)}</span><span class="task-title">${t[2]}</span><span class="tag ${t[3]==='英语'?'green':''}">${t[3]}</span></div>`).join(''):'<div class="empty-state">今天没有安排，去玩一会儿吧。</div>';el.classList.toggle('is-scrollable',el.scrollHeight>el.clientHeight+2);el.querySelectorAll('[data-task]').forEach(btn=>btn.onclick=()=>{const live=ensureDay(key),i=Number(btn.dataset.task);if(!live[i])return;live[i][4]=!live[i][4];save();renderToday();renderWeek()});const next=list.find(t=>!t[4]);document.getElementById('nextEvent').innerHTML=next?`<div class="next-time">${timeLabel(next)}</div><div class="next-title">${next[2]}</div><div class="next-sub">${next[3]} · 做完就休息</div>`:'<div class="next-time">完成啦</div><div class="next-title">今天的安排都做好了</div><div class="next-sub">可以放心去玩或阅读</div>';const done=list.filter(t=>t[4]).length;const progress=document.getElementById('taskProgress');if(progress)progress.textContent=list.length?`${done} / ${list.length} 已完成`:'今天没有任务';document.getElementById('dayMood').innerHTML=`<span class="en">${line[1]}</span>${done?`<span class="hero-done">${done} / ${list.length} done</span>`:''}`;updateTodayAdjust();syncHistory()}
+function renderToday(){const key=todayKey(),list=tasksFor(key),el=document.getElementById('todayTasks'),line=dailyLine();const todayLabelEl=document.getElementById('todayLabel');if(todayLabelEl)todayLabelEl.textContent=`今天 · ${today.getMonth()+1}月${today.getDate()}日 ${cnDays[day]}`;const lineEl=document.getElementById('dayLine');if(lineEl)lineEl.textContent=line[0];el.innerHTML=list.length?list.map((t,i)=>`<div class="task-item ${t[4]?'done':''}"><button class="check" data-task="${i}" aria-label="${t[4]?'取消完成':'标记完成'}：${t[2]}">${t[4]?"<svg viewBox='0 0 24 24' aria-hidden='true'><path d='M5 12.6 9.7 17.2 19 7.8'/></svg>":''}</button><span class="task-time">${timeLabel(t)}</span><span class="task-title">${t[2]}</span><span class="tag ${t[3]==='英语'?'green':''}">${t[3]}</span></div>`).join(''):'<div class="empty-state">今天没有安排，去玩一会儿吧。</div>';el.classList.toggle('is-scrollable',el.scrollHeight>el.clientHeight+2);el.querySelectorAll('[data-task]').forEach(btn=>btn.onclick=()=>{const live=ensureDay(key),i=Number(btn.dataset.task);if(!live[i])return;live[i][4]=!live[i][4];syncTaskPoints(key,live[i]);save();renderToday();renderWeek()});const next=list.find(t=>!t[4]);document.getElementById('nextEvent').innerHTML=next?`<div class="next-time">${timeLabel(next)}</div><div class="next-title">${next[2]}</div><div class="next-sub">${next[3]} · 做完就休息</div>`:'<div class="next-time">完成啦</div><div class="next-title">今天的安排都做好了</div><div class="next-sub">可以放心去玩或阅读</div>';const done=list.filter(t=>t[4]).length;const progress=document.getElementById('taskProgress');if(progress)progress.textContent=list.length?`${done} / ${list.length} 已完成`:'今天没有任务';document.getElementById('dayMood').innerHTML=`<span class="en">${line[1]}</span>${done?`<span class="hero-done">${done} / ${list.length} done</span>`:''}`;updateTodayAdjust();syncHistory()}
 let weekOffset=0,weekEdit=false,keepWeekEdit=false;
 const weekStart=()=>{const b=new Date(today);b.setDate(today.getDate()-day+weekOffset*7);return b};
 function weekKeys(){const b=weekStart(),out=[];for(let i=0;i<7;i++){const d=new Date(b);d.setDate(b.getDate()+i);out.push(keyOf(d))}return out}
@@ -139,8 +154,8 @@ function homeworkBlocksHtml(week,i){
       :`<button class="hw-task${b.done?' done':''}" data-hw-type="${i}" data-hw-hash="${b.hash}" aria-pressed="${b.done}"><span class="hw-check"><svg viewBox='0 0 24 24' aria-hidden='true'><path d='M5 12.6 9.7 17.2 19 7.8'/></svg></span><span class="hw-text">${hwEsc(b.text)}</span></button>`).join('');
 }
 function homeworkStats(week,i){const s=homeworkParse(week,i);return {tasks:s.total,done:s.done}}
-function renderHomework(editable=false){const week=homeworkForWeek(),targetId=editable?'homeworkSettingsCards':'homeworkCards',cards=document.getElementById(targetId);if(!cards)return;cards.innerHTML=homeworkTypes.map((type,i)=>editable?`<article class="homework-card"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><textarea data-homework-text="${i}" maxlength="300" placeholder="家长把本周作业写在这里…"></textarea><div class="hw-count" data-hw-count="${i}">写完后会自动拆成可勾选的任务</div><label class="homework-upload">＋ 上传本周资料<input type="file" data-homework-file="${i}" accept="image/*,.pdf,.doc,.docx,.txt" /></label><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName||'还没有附件'}</div></article>`:`<article class="homework-card homework-card-readonly"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><div class="hw-blocks">${homeworkBlocksHtml(week,i)}</div><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName?`已上传：${week[i].fileName}`:'本周还没有资料'}</div></article>`).join('');if(editable){cards.querySelectorAll('[data-homework-text]').forEach(input=>{const idx=Number(input.dataset.homeworkText);const refreshCount=()=>{const badge=cards.querySelector('[data-hw-count="'+idx+'"]');if(!badge)return;const st=homeworkStats(week,idx);badge.textContent=st.tasks?'已识别 '+st.tasks+' 条任务，孩子端可以直接点':'写完后会自动拆成可勾选的任务'};input.value=week[idx]?.text||'';refreshCount();input.oninput=()=>{week[idx]={...(week[idx]||{}),text:input.value};save();refreshCount()}});cards.querySelectorAll('[data-homework-file]').forEach(input=>input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const i=Number(input.dataset.homeworkFile),fileId=await putMedia(file);week[i]={...(week[i]||{}),fileId,fileName:file.name};save();renderHomework(true);renderHomework(false)}catch(error){alert('附件暂时没有保存成功，请稍后重试')}})}else cards.querySelectorAll('[data-hw-type]').forEach(btn=>{btn.onclick=()=>{const i=Number(btn.dataset.hwType),h=btn.dataset.hwHash,item=week[i]||(week[i]={});item.done=item.done||{};if(item.done[h])delete item.done[h];else item.done[h]=true;save();renderHomework(false)}});const attachmentCount=homeworkTypes.filter((_,i)=>week[i]?.fileName).length;const status=document.getElementById(editable?'homeworkSettingsStatus':'homeworkStatus');if(status)status.textContent=attachmentCount?`本周已上传 ${attachmentCount} 份资料`:'本周还没有上传附件'}
-function renderWeek(){const base=weekStart(),end=new Date(base);end.setDate(base.getDate()+6);const range=document.getElementById('weekRange');if(!range)return;range.textContent=`${weekOffset===0?'本周 · ':weekOffset===1?'下周 · ':weekOffset===-1?'上周 · ':''}${base.getMonth()+1}月${base.getDate()}日—${end.getMonth()+1}月${end.getDate()}`;const cards=document.getElementById('weekCards');cards.classList.toggle('editing',weekEdit);const keys=weekKeys();cards.innerHTML=keys.map((k,i)=>{const d=parseKey(k),list=tasksFor(k),ov=hasOverride(k),isToday=k===todayKey();const head=`<div class="day-card-top"><div><div class="day-name">${cnDays[i]}</div><div class="day-number">${d.getDate()}</div></div></div>`;if(weekEdit){const rows=list.length?list.map((t,j)=>`<div class="day-edit-row"><input class="row-time" value="${escapeAttr(t[0])}" data-day-key="${k}" data-row="${j}" data-field="0" placeholder="17:50" aria-label="开始时间"><input class="row-end" value="${escapeAttr(t[1])}" data-day-key="${k}" data-row="${j}" data-field="1" placeholder="结束时间" aria-label="结束时间"><input class="row-title" value="${escapeAttr(t[2])}" data-day-key="${k}" data-row="${j}" data-field="2" placeholder="安排内容" aria-label="安排内容"><input class="row-tag" value="${escapeAttr(t[3])}" data-day-key="${k}" data-row="${j}" data-field="3" placeholder="类别" aria-label="类别"><button class="delete-day-task" data-del-key="${k}" data-row="${j}" aria-label="删除这一项">×</button></div>`).join(''):'<div class="schedule-empty">这一天还没有安排</div>';return `<div class="day-card ${isToday?'today':''} ${ov?'adjusted':''}" data-day-card="${k}">${head}${rows}<div class="day-edit-actions"><button class="mini-btn" data-add-key="${k}">＋ 加一项</button>${ov?`<button class="mini-btn ghost" data-restore-key="${k}">恢复固定</button>`:''}</div></div>`}const items=list.length?list.map(t=>`<div class="day-item"><strong>${timeLabel(t)} · ${t[3]}</strong>${t[2]}</div>`).join(''):'<div class="day-item empty">没有安排</div>';return `<div class="day-card ${isToday?'today':''} ${ov?'adjusted':''}" data-day-card="${k}">${head}${items}</div>`}).join('');bindWeekEditor(cards);const backBtn=document.getElementById('backThisWeek');if(backBtn)backBtn.classList.toggle('hidden',weekOffset===0);const restoreBtn=document.getElementById('restoreWeek');if(restoreBtn)restoreBtn.classList.toggle('hidden',!keys.some(hasContentOverride))}updateTodayAdjust()
+function renderHomework(editable=false){const week=homeworkForWeek(),targetId=editable?'homeworkSettingsCards':'homeworkCards',cards=document.getElementById(targetId);if(!cards)return;cards.innerHTML=homeworkTypes.map((type,i)=>editable?`<article class="homework-card"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><textarea data-homework-text="${i}" maxlength="300" placeholder="家长把本周作业写在这里…"></textarea><div class="hw-count" data-hw-count="${i}">写完后会自动拆成可勾选的任务</div><label class="homework-upload">＋ 上传本周资料<input type="file" data-homework-file="${i}" accept="image/*,.pdf,.doc,.docx,.txt" /></label><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName||'还没有附件'}</div></article>`:`<article class="homework-card homework-card-readonly"><div class="homework-card-head"><span class="homework-emoji">${type[2]}</span><div><h3>${type[0]}</h3><p>${type[1]}</p></div></div><div class="hw-blocks">${homeworkBlocksHtml(week,i)}</div><div class="homework-file" data-homework-name="${i}">${week[i]?.fileName?`已上传：${week[i].fileName}`:'本周还没有资料'}</div></article>`).join('');if(editable){cards.querySelectorAll('[data-homework-text]').forEach(input=>{const idx=Number(input.dataset.homeworkText);const refreshCount=()=>{const badge=cards.querySelector('[data-hw-count="'+idx+'"]');if(!badge)return;const st=homeworkStats(week,idx);badge.textContent=st.tasks?'已识别 '+st.tasks+' 条任务，孩子端可以直接点':'写完后会自动拆成可勾选的任务'};input.value=week[idx]?.text||'';refreshCount();input.oninput=()=>{week[idx]={...(week[idx]||{}),text:input.value};save();refreshCount()}});cards.querySelectorAll('[data-homework-file]').forEach(input=>input.onchange=async()=>{const file=input.files?.[0];if(!file)return;try{const i=Number(input.dataset.homeworkFile),fileId=await putMedia(file);week[i]={...(week[i]||{}),fileId,fileName:file.name};save();renderHomework(true);renderHomework(false)}catch(error){alert('附件暂时没有保存成功，请稍后重试')}})}else cards.querySelectorAll('[data-hw-type]').forEach(btn=>{btn.onclick=()=>{const i=Number(btn.dataset.hwType),h=btn.dataset.hwHash,item=week[i]||(week[i]={});item.done=item.done||{};if(item.done[h])delete item.done[h];else item.done[h]=true;syncHomeworkPoints(i,h,!!item.done[h],btn);save();renderHomework(false)}});const attachmentCount=homeworkTypes.filter((_,i)=>week[i]?.fileName).length;const status=document.getElementById(editable?'homeworkSettingsStatus':'homeworkStatus');if(status)status.textContent=attachmentCount?`本周已上传 ${attachmentCount} 份资料`:'本周还没有上传附件'}
+function renderWeek(){const base=weekStart(),end=new Date(base);end.setDate(base.getDate()+6);const range=document.getElementById('weekRange');if(!range)return;range.textContent=`${weekOffset===0?'本周 · ':weekOffset===1?'下周 · ':weekOffset===-1?'上周 · ':''}${base.getMonth()+1}月${base.getDate()}日—${end.getMonth()+1}月${end.getDate()}`;const cards=document.getElementById('weekCards');cards.classList.toggle('editing',weekEdit);const keys=weekKeys();cards.innerHTML=keys.map((k,i)=>{const d=parseKey(k),list=tasksFor(k),ov=hasOverride(k),isToday=k===todayKey();const dayPts=pointsOn(k);const head=`<div class="day-card-top"><div><div class="day-name">${cnDays[i]}</div><div class="day-number">${d.getDate()}</div></div>${dayPts?`<span class="day-pts">+${dayPts}</span>`:''}</div>`;if(weekEdit){const rows=list.length?list.map((t,j)=>`<div class="day-edit-row"><input class="row-time" value="${escapeAttr(t[0])}" data-day-key="${k}" data-row="${j}" data-field="0" placeholder="17:50" aria-label="开始时间"><input class="row-end" value="${escapeAttr(t[1])}" data-day-key="${k}" data-row="${j}" data-field="1" placeholder="结束时间" aria-label="结束时间"><input class="row-title" value="${escapeAttr(t[2])}" data-day-key="${k}" data-row="${j}" data-field="2" placeholder="安排内容" aria-label="安排内容"><input class="row-tag" value="${escapeAttr(t[3])}" data-day-key="${k}" data-row="${j}" data-field="3" placeholder="类别" aria-label="类别"><button class="delete-day-task" data-del-key="${k}" data-row="${j}" aria-label="删除这一项">×</button></div>`).join(''):'<div class="schedule-empty">这一天还没有安排</div>';return `<div class="day-card ${isToday?'today':''} ${ov?'adjusted':''}" data-day-card="${k}">${head}${rows}<div class="day-edit-actions"><button class="mini-btn" data-add-key="${k}">＋ 加一项</button>${ov?`<button class="mini-btn ghost" data-restore-key="${k}">恢复固定</button>`:''}</div></div>`}const items=list.length?list.map(t=>`<div class="day-item"><strong>${timeLabel(t)} · ${t[3]}</strong>${t[2]}</div>`).join(''):'<div class="day-item empty">没有安排</div>';return `<div class="day-card ${isToday?'today':''} ${ov?'adjusted':''}" data-day-card="${k}">${head}${items}</div>`}).join('');bindWeekEditor(cards);const backBtn=document.getElementById('backThisWeek');if(backBtn)backBtn.classList.toggle('hidden',weekOffset===0);const restoreBtn=document.getElementById('restoreWeek');if(restoreBtn)restoreBtn.classList.toggle('hidden',!keys.some(hasContentOverride))}updateTodayAdjust()
 function focusDayCard(key){const card=document.querySelector(`[data-day-card="${key}"]`);if(!card)return;card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.add('flash');setTimeout(()=>card.classList.remove('flash'),2200)}
 function restoreWeekOverrides(){const keys=weekKeys().filter(hasOverride);if(!keys.length)return;if(!confirm('这一周的临时调整会全部取消，回到固定模板。确定吗？'))return;keys.forEach(k=>{delete data.days[k]});save();renderWeek();renderToday();toast('已回到固定模板')}
 function restoreTodayOverride(){const key=todayKey();if(!hasOverride(key))return;delete data.days[key];save();renderWeek();renderToday();toast('今天已回到固定模板')}
@@ -218,13 +233,21 @@ function renderEnglish(){
   });
 }
 async function renderMistakes(){const el=document.getElementById('mistakeList');if(!data.mistakes.length){el.innerHTML='<div class="empty-state">还没有错题。发现不会的，拍下来就好。</div>';return}el.innerHTML=data.mistakes.map((m,i)=>`<article class="mistake-card ${m.photoId?'has-media':''}"><div class="mistake-photo-wrap ${m.photoId?'':'hidden'}"><img data-mistake-photo="${i}" alt="${m.subject||'错题'}照片" /></div><div class="mistake-content"><div class="mistake-title-row"><h3>${m.subject}</h3><span class="mistake-meta">${m.date}</span></div><p>${m.text}</p>${m.learning?`<div class="mistake-learning"><span>这次我学到了</span>${m.learning}</div>`:''}</div><button class="remove-mistake" data-remove="${i}" aria-label="删除这道错题">删除</button></article>`).join('');for(const image of el.querySelectorAll('[data-mistake-photo]')){const item=data.mistakes[Number(image.dataset.mistakePhoto)];try{const blob=await getMedia(item.photoId);if(blob)image.src=URL.createObjectURL(blob);else image.closest('.mistake-photo-wrap').classList.add('hidden')}catch(error){image.closest('.mistake-photo-wrap').classList.add('hidden')}}el.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{data.mistakes.splice(Number(b.dataset.remove),1);save();renderMistakes()})}
-function renderGrowth(){const total=data.history.reduce((n,x)=>n+x.completed,0),days=data.history.filter(x=>x.completed>0).length;document.getElementById('growthSummary').innerHTML=`<div class="growth-number">${total}</div><div class="growth-copy"><b>件小事，已经被你完成</b><p>你在 ${days} 天里留下了自己的脚印。每一次勾选，都是在照顾自己的节奏。</p></div>`;document.getElementById('growthNote').value=data.history.find(x=>x.date===todayKey())?.note||'';document.getElementById('growthList').innerHTML=data.history.filter(x=>x.completed||x.note).slice(0,7).map(x=>`<article class="growth-day"><div class="growth-day-head"><b>${x.label}</b><span>${x.completed} 件完成</span></div><div class="growth-items">${x.items.map(i=>`<span class="growth-item">✓ ${i}</span>`).join('')||'<span class="growth-item">今天也有好好照顾自己</span>'}</div>${x.note?`<p class="growth-note-text">“${x.note}”</p>`:''}</article>`).join('')||'<div class="empty-state">完成第一件小事后，这里会留下你的记录。</div>'}
-function showView(name){document.querySelectorAll('main>section').forEach(s=>s.classList.add('hidden'));if(name==='today'){['todayView','todayScheduleView','todayQuickNav'].forEach(id=>document.getElementById(id)?.classList.remove('hidden'));renderToday()}else document.getElementById(name+'View').classList.remove('hidden');document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='week'){if(!keepWeekEdit)weekEdit=false;keepWeekEdit=false;renderWeek()}if(name==='chinese'){}if(name==='homework')renderHomework(false);if(name==='family'){ensureHomeworkSettings();renderHomework(true)}if(name==='english')renderEnglish();if(name==='mistakes')renderMistakes();if(name==='growth')renderGrowth()}
+function renderGrowth(){
+  const total=data.history.reduce((n,x)=>n+x.completed,0),days=data.history.filter(x=>x.completed>0).length;
+  const bal=pointsBalance(),earned=pointsEarned();
+  document.getElementById('growthSummary').innerHTML=`<div class="growth-number">${total}</div><div class="growth-copy"><b>件小事，已经被你完成</b><p>你在 ${days} 天里留下了自己的脚印，一共攒下 ${earned} 分${bal!==earned?`，现在还剩 ${bal} 分`:''}。每一次勾选，都是在照顾自己的节奏。</p></div>`;
+  const noteEl=document.getElementById('growthNote');
+  if(noteEl&&document.activeElement!==noteEl)noteEl.value=data.history.find(x=>x.date===todayKey())?.note||'';
+  renderGrowthLedger();
+}
+function showView(name){document.querySelectorAll('main>section').forEach(s=>s.classList.add('hidden'));if(name==='today'){['todayView','todayScheduleView','todayQuickNav'].forEach(id=>document.getElementById(id)?.classList.remove('hidden'));renderToday()}else document.getElementById(name+'View').classList.remove('hidden');document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='week'){if(!keepWeekEdit)weekEdit=false;keepWeekEdit=false;renderWeek()}if(name==='chinese'){}if(name==='homework')renderHomework(false);if(name==='family'){ensureHomeworkSettings();renderHomework(true)}if(name==='english')renderEnglish();if(name==='mistakes')renderMistakes();if(name==='growth')renderGrowth();if(name==='points')renderPoints()}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{const v=b.dataset.view;if(v==='family'){enterFamily();return}parentUnlocked=false;showView(v)});
 document.getElementById('addTask').onclick=()=>{const input=document.getElementById('newTask');if(!input.value.trim())return;ensureDay(todayKey()).push(['','',input.value.trim(),'自己的事',false]);input.value='';save();renderToday()};document.getElementById('newTask').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('addTask').click()});document.getElementById('clearDone').onclick=()=>{const list=ensureDay(todayKey());list.forEach(t=>t[4]=false);data.custom=data.custom.filter(t=>!t.done);syncHistory();renderToday()};
-document.getElementById('addMistake').onclick=()=>document.getElementById('mistakeModal').classList.remove('hidden');document.querySelector('[data-close="mistakeModal"]').onclick=()=>document.getElementById('mistakeModal').classList.add('hidden');document.getElementById('saveMistake').onclick=()=>{const subject=document.getElementById('mistakeSubject').value.trim()||'待整理',text=document.getElementById('mistakeText').value.trim()||'还没写下错因';data.mistakes.unshift({subject,text,date:'刚刚'});save();document.getElementById('mistakeModal').classList.add('hidden');document.getElementById('mistakeSubject').value='';document.getElementById('mistakeText').value='';renderMistakes()};
+document.getElementById('addMistake').onclick=()=>document.getElementById('mistakeModal').classList.remove('hidden');document.querySelector('[data-close="mistakeModal"]').onclick=()=>document.getElementById('mistakeModal').classList.add('hidden');document.getElementById('saveMistake').onclick=()=>{const subject=document.getElementById('mistakeSubject').value.trim()||'待整理',text=document.getElementById('mistakeText').value.trim()||'还没写下错因';data.mistakes.unshift({subject,text,date:'刚刚'});save();awardReviewPoints();document.getElementById('mistakeModal').classList.add('hidden');document.getElementById('mistakeSubject').value='';document.getElementById('mistakeText').value='';renderMistakes()};
 function loadSettings(){const g=id=>document.getElementById(id);const w=g('weekdayCare'),b=g('backupCare'),p=g('pickupNote');if(w)w.value=data.settings.weekdayCare||'待确认';if(b)b.value=data.settings.backupCare||'待确认';if(p)p.value=data.settings.pickupNote||'';const wk=g('wakeTime'),sl=g('sleepTime');if(wk)wk.value=data.settings.wakeTime||'07:00';if(sl)sl.value=data.settings.sleepTime||'21:00'}document.getElementById('saveGrowthNote').onclick=()=>{let record=data.history.find(x=>x.date===todayKey());if(!record){syncHistory();record=data.history.find(x=>x.date===todayKey())}record.note=document.getElementById('growthNote').value.trim();save();renderGrowth()};document.getElementById('saveHomework').onclick=()=>{save();const status=document.getElementById('homeworkStatus');if(status)status.textContent='本周作业已保存';};document.getElementById('openSettings').onclick=()=>enterFamily();
 renderToday();loadSettings();ensureHomeworkSettings();renderHomework(false);document.querySelector('#homeworkView .homework-footer')?.remove();const familyNav=document.querySelector('.bottom-nav button[data-view="family"]');if(familyNav)familyNav.innerHTML='<span aria-hidden="true">♡</span>设置';const familyView=document.getElementById('familyView');if(familyView){familyView.querySelector('.section-kicker').textContent='SETTINGS / 设置';familyView.querySelector('h2').textContent='家长设置'}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshDateIfChanged()});window.addEventListener('focus',refreshDateIfChanged);window.addEventListener('pageshow',refreshDateIfChanged);setInterval(refreshDateIfChanged,60000);
 
 // 图片和录音放进 IndexedDB，避免占用 localStorage 的小容量配额。
 const mediaDb=(()=>new Promise((resolve,reject)=>{const request=indexedDB.open('chengcheng-media-v1',1);request.onupgradeneeded=()=>request.result.createObjectStore('media');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}))();
@@ -235,7 +258,7 @@ let capturePhoto=null,captureAudio=null,recorder=null,recordingChunks=[];const c
 document.getElementById('captureMistake').onclick=()=>captureModal.classList.remove('hidden');document.querySelector('[data-close="captureModal"]').onclick=()=>captureModal.classList.add('hidden');
 document.getElementById('mistakePhoto').onchange=e=>{capturePhoto=e.target.files[0]||null;const preview=document.getElementById('photoPreview');if(capturePhoto){preview.src=URL.createObjectURL(capturePhoto);preview.classList.remove('hidden')}else preview.classList.add('hidden')};
 document.getElementById('recordReflection').onclick=async()=>{const button=document.getElementById('recordReflection'),status=document.getElementById('recordStatus');if(recorder&&recorder.state==='recording'){recorder.stop();button.textContent='● 开始录音';button.classList.remove('recording');status.textContent='录音已完成';return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});recordingChunks=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)recordingChunks.push(e.data)};recorder.onstop=()=>{captureAudio=new Blob(recordingChunks,{type:recorder.mimeType||'audio/webm'});document.getElementById('reflectionAudio').src=URL.createObjectURL(captureAudio);document.getElementById('reflectionAudio').classList.remove('hidden');stream.getTracks().forEach(t=>t.stop())};recorder.start();button.textContent='■ 停止录音';button.classList.add('recording');status.textContent='正在听你说…'}catch(error){status.textContent='暂时不能录音，也可以写下来';console.warn(error)}};
-document.getElementById('saveCapture').onclick=async()=>{const subject=document.getElementById('captureSubject').value.trim()||'待整理',text=document.getElementById('captureText').value.trim()||'还没写下反思';let photoId=null,audioId=null;try{if(capturePhoto)photoId=await putMedia(capturePhoto);if(captureAudio)audioId=await putMedia(captureAudio)}catch(error){alert('媒体暂时没有保存成功，请稍后重试');console.warn(error)}data.mistakes.unshift({id:`mistake-${Date.now()}`,subject,text,date:'刚刚',photoId,audioId,source:'澄澄的今天'});save();capturePhoto=null;captureAudio=null;captureModal.classList.add('hidden');document.getElementById('mistakePhoto').value='';document.getElementById('captureSubject').value='';document.getElementById('captureText').value='';document.getElementById('photoPreview').classList.add('hidden');document.getElementById('reflectionAudio').classList.add('hidden');renderMistakes()};
+document.getElementById('saveCapture').onclick=async()=>{const subject=document.getElementById('captureSubject').value.trim()||'待整理',text=document.getElementById('captureText').value.trim()||'还没写下反思';let photoId=null,audioId=null;try{if(capturePhoto)photoId=await putMedia(capturePhoto);if(captureAudio)audioId=await putMedia(captureAudio)}catch(error){alert('媒体暂时没有保存成功，请稍后重试');console.warn(error)}data.mistakes.unshift({id:`mistake-${Date.now()}`,subject,text,date:'刚刚',photoId,audioId,source:'澄澄的今天'});save();awardReviewPoints();capturePhoto=null;captureAudio=null;captureModal.classList.add('hidden');document.getElementById('mistakePhoto').value='';document.getElementById('captureSubject').value='';document.getElementById('captureText').value='';document.getElementById('photoPreview').classList.add('hidden');document.getElementById('reflectionAudio').classList.add('hidden');renderMistakes()};
 document.getElementById('exportGrowth').onclick=async()=>{const records=[];for(const item of data.mistakes){const copy={...item};if(item.photoId){const blob=await getMedia(item.photoId);if(blob)copy.photo=await blobToDataUrl(blob)}if(item.audioId){const blob=await getMedia(item.audioId);if(blob)copy.audio=await blobToDataUrl(blob)}records.push(copy)}const payload={format:'ccgrowth',version:1,exportedAt:new Date().toISOString(),childLabel:'澄澄',mistakes:records,history:data.history,settings:{}};const blob=new Blob([JSON.stringify(payload)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`澄澄成长记录_${todayKey()}.ccgrowth`;a.click();URL.revokeObjectURL(url)};
 document.getElementById('importGrowth').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const payload=JSON.parse(await file.text()),incoming=Array.isArray(payload.mistakes)?payload.mistakes:[];for(const item of incoming){if(data.mistakes.some(x=>x.id&&x.id===item.id))continue;const copy={...item};if(item.photo){copy.photoId=await putMedia(await (await fetch(item.photo)).blob());delete copy.photo}if(item.audio){copy.audioId=await putMedia(await (await fetch(item.audio)).blob());delete copy.audio}data.mistakes.push(copy)}if(Array.isArray(payload.history)){const known=new Set(data.history.map(x=>x.date));data.history.push(...payload.history.filter(x=>!known.has(x.date)))}save();alert(`已导入 ${incoming.length} 条成长记录`);renderMistakes();renderGrowth()}catch(error){alert('这个记录文件无法读取');console.warn(error)}e.target.value=''};
 let familyDraft=JSON.parse(JSON.stringify(data.tasks||{})),familyScheduleDirty=false;
@@ -257,12 +280,13 @@ document.querySelector('[data-close="captureModal"]').addEventListener('click',s
 const guideQuestions=['这道题要你求什么？','你刚才是怎么想的？哪一步开始不确定？','题目里的哪个条件最重要？你有没有用上它？','如果重新做一次，你会先检查哪一步？'];let guideIndex=0,guideAnswers=[];
 function renderGuide(){document.getElementById('guideStep').textContent=`第 ${guideIndex+1} / ${guideQuestions.length} 步`;document.getElementById('guideQuestion').textContent=guideQuestions[guideIndex];document.getElementById('guideAnswer').value=guideAnswers[guideIndex]||'';document.getElementById('guideBack').style.visibility=guideIndex?'visible':'hidden';document.getElementById('guideNext').textContent=guideIndex===guideQuestions.length-1?'完成引导':'下一步'}
 document.getElementById('guideThinking').onclick=()=>{guideIndex=0;guideAnswers=[];document.getElementById('guidePanel').classList.remove('hidden');renderGuide();document.getElementById('guideAnswer').focus()};
-document.getElementById('guideNext').onclick=()=>{guideAnswers[guideIndex]=document.getElementById('guideAnswer').value.trim();if(guideIndex<guideQuestions.length-1){guideIndex++;renderGuide()}else{document.getElementById('captureText').value=`我的反思：${guideAnswers.filter(Boolean).join('；')}`;document.getElementById('guideQuestion').textContent='你已经把这道题想清楚一遍了。保存下来，下次再试一次。';document.getElementById('guideStep').textContent='引导完成';document.getElementById('guideAnswer').classList.add('hidden');document.getElementById('guideNext').classList.add('hidden')}};
+document.getElementById('guideNext').onclick=()=>{guideAnswers[guideIndex]=document.getElementById('guideAnswer').value.trim();if(guideIndex<guideQuestions.length-1){guideIndex++;renderGuide()}else{document.getElementById('captureText').value=`我的反思：${guideAnswers.filter(Boolean).join('；')}`;updateLearningFeedback();document.getElementById('guideQuestion').textContent='已经把这道题想清楚一遍了。保存下来，下次再试一次。';document.getElementById('guideStep').textContent='引导完成';document.getElementById('guideAnswer').classList.add('hidden');document.getElementById('guideNext').classList.add('hidden')}};
 document.getElementById('guideBack').onclick=()=>{if(guideIndex>0){guideIndex--;renderGuide()}};
 document.getElementById('captureMistake').addEventListener('click',()=>{guideIndex=0;guideAnswers=[];document.getElementById('guidePanel').classList.add('hidden');document.getElementById('guideAnswer').classList.remove('hidden');document.getElementById('guideNext').classList.remove('hidden')});
 const originalSaveCapture=document.getElementById('saveCapture').onclick;document.getElementById('saveCapture').onclick=async()=>{if(guideAnswers.length)document.getElementById('captureText').value=`我的反思：${guideAnswers.filter(Boolean).join('；')}`;await originalSaveCapture();guideAnswers=[];document.getElementById('guidePanel').classList.add('hidden');document.getElementById('guideAnswer').classList.remove('hidden');document.getElementById('guideNext').classList.remove('hidden')};
-function makeLearningFeedback(text){const value=(text||'').trim();if(!value)return '';if(/题目|看清|读题|审题|条件|总数|每份|单位/.test(value))return '你已经发现自己是在还没看清题目时就开始计算了。下次可以先圈出题目中的“总数”和“每份”。';if(/计算|算错|加法|减法|乘法|除法|小数点|数字/.test(value))return '你已经发现问题出在计算这一步。下次可以先估一估答案，再检查数字和运算符。';if(/公式|概念|定义|不会|不懂|意思/.test(value))return '你已经发现自己还需要把这个知识点说清楚。下次可以先用自己的话解释一遍，再开始做题。';if(/方法|步骤|思路|不知道从哪/.test(value))return '你已经发现自己卡在解题步骤上了。下次可以先写出已知条件，再想题目要你求什么。';return '你已经愿意回头看看自己的做法了。下次可以先说清楚“题目要我求什么”，再开始做。'}
-document.getElementById('captureText').addEventListener('input',e=>{document.getElementById('learningFeedback').value=makeLearningFeedback(e.target.value)});
+function makeLearningFeedback(text){const value=(text||'').trim();if(!value)return '';if(/题目|看清|读题|审题|条件|总数|每份|单位/.test(value))return '这次可以先把题目要找的量和已知条件圈出来，再开始计算；特别留意“总数、每份、单位”这些信息。';if(/计算|算错|加法|减法|乘法|除法|小数点|数字/.test(value))return '这次可以把重点放在运算过程：先估一估结果，再分步核对数字、运算符和小数点。';if(/公式|概念|定义|不会|不懂|意思/.test(value))return '这次可以先用自己的话说一遍这个概念，再对照公式或例题检查哪里还需要补充。';if(/方法|步骤|思路|不知道从哪/.test(value))return '这次可以先写出已知条件和题目要找的内容，再一步一步记录自己的做法。';return '可以先说清楚“题目要我求什么、我已经知道什么、下一步做什么”，再重新试一次。'}
+function updateLearningFeedback(text=document.getElementById('captureText')?.value||''){const field=document.getElementById('learningFeedback');if(!field)return;const feedback=makeLearningFeedback(text);field.value=feedback;field.classList.toggle('has-feedback',Boolean(feedback))}
+document.getElementById('captureText').addEventListener('input',e=>updateLearningFeedback(e.target.value));
 const previousSaveCapture=document.getElementById('saveCapture').onclick;document.getElementById('saveCapture').onclick=async()=>{const feedback=document.getElementById('learningFeedback').value||makeLearningFeedback(document.getElementById('captureText').value);await previousSaveCapture();if(data.mistakes[0]){data.mistakes[0].learning=feedback;save()}document.getElementById('learningFeedback').value=''};
 const escapeAttr=value=>String(value??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function renderFamilyEditor(){const editor=document.getElementById('familyScheduleEditor');editor.innerHTML=cnDays.map((name,dayIndex)=>{const tasks=familyDraft[dayIndex]||[];return `<div class="family-day-editor"><div class="family-day-head"><b>${name}</b><button class="add-schedule-btn" data-add-day="${dayIndex}">＋ 添加安排</button></div>${tasks.length?tasks.map((task,taskIndex)=>`<div class="schedule-edit-row"><input type="time" value="${escapeAttr(task[0])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="0" aria-label="${name}开始时间"><input type="time" value="${escapeAttr(task[1])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="1" aria-label="${name}结束时间"><input value="${escapeAttr(task[2])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="2" placeholder="安排内容" aria-label="${name}安排内容"><input class="schedule-tag" value="${escapeAttr(task[3])}" data-edit-day="${dayIndex}" data-edit-index="${taskIndex}" data-edit-field="3" placeholder="类别" aria-label="${name}类别"><button class="delete-schedule-btn" data-delete-day="${dayIndex}" data-delete-index="${taskIndex}" aria-label="删除安排">×</button></div>`).join(''):'<div class="schedule-empty">还没有安排</div>'}</div>`}).join('');editor.querySelectorAll('[data-add-day]').forEach(button=>button.onclick=()=>{const dayIndex=Number(button.dataset.addDay);familyDraft[dayIndex]=familyDraft[dayIndex]||[];familyDraft[dayIndex].push(['','','新安排','活动',false]);markFamilyScheduleDirty();renderFamilyEditor()});editor.querySelectorAll('[data-edit-day]').forEach(input=>input.onchange=()=>{const task=familyDraft[Number(input.dataset.editDay)][Number(input.dataset.editIndex)];task[Number(input.dataset.editField)]=input.value;markFamilyScheduleDirty()});editor.querySelectorAll('[data-delete-day]').forEach(button=>button.onclick=()=>{familyDraft[Number(button.dataset.deleteDay)].splice(Number(button.dataset.deleteIndex),1);markFamilyScheduleDirty();renderFamilyEditor()})}
@@ -396,7 +420,7 @@ let parentUnlocked=false,parentPinThen=null;
 function parentPin(){try{return localStorage.getItem(PARENT_PIN_KEY)||PARENT_PIN_DEFAULT}catch(e){return PARENT_PIN_DEFAULT}}
 function saveParentPin(v){try{localStorage.setItem(PARENT_PIN_KEY,String(v))}catch(e){}}
 function enterFamily(){if(parentUnlocked){showView('family');return}openParentGate(()=>showView('family'))}
-function openParentGate(then){parentPinThen=typeof then==='function'?then:null;const m=document.getElementById('parentGate'),inp=document.getElementById('parentPinInput'),hint=document.getElementById('parentPinHint');if(!m||!inp)return;inp.value='';if(hint)hint.textContent='';m.classList.remove('hidden');setTimeout(()=>inp.focus(),60)}
+function openParentGate(then,label){parentPinThen=typeof then==='function'?then:null;const m=document.getElementById('parentGate'),inp=document.getElementById('parentPinInput'),hint=document.getElementById('parentPinHint'),lab=document.getElementById('parentGateLabel');if(lab)lab.textContent=label||'输入密码后进入设置';if(!m||!inp)return;inp.value='';if(hint)hint.textContent='';m.classList.remove('hidden');setTimeout(()=>inp.focus(),60)}
 function closeParentGate(){const m=document.getElementById('parentGate');if(m)m.classList.add('hidden');parentPinThen=null}
 function submitParentPin(){const inp=document.getElementById('parentPinInput'),hint=document.getElementById('parentPinHint');const v=((inp&&inp.value)||'').trim();if(!v){if(hint)hint.textContent='请输入密码';return}if(v!==parentPin()){if(hint)hint.textContent='密码不对，再试一次';if(inp){inp.value='';inp.focus()}return}const then=parentPinThen;parentUnlocked=true;closeParentGate();if(then)then()}
 function bindParentGate(){
@@ -410,3 +434,336 @@ function bindParentGate(){
   if(setBtn)setBtn.onclick=()=>{const a=document.getElementById('newParentPin'),b=document.getElementById('newParentPin2'),st=document.getElementById('parentPinStatus');const v1=((a&&a.value)||'').trim(),v2=((b&&b.value)||'').trim();if(!/^\d{4,8}$/.test(v1)){if(st)st.textContent='请输入 4–8 位数字';return}if(v1!==v2){if(st)st.textContent='两次输入不一致';return}saveParentPin(v1);if(a)a.value='';if(b)b.value='';if(st)st.textContent='';toast('家长密码已更新')};
 }
 safeRun('parentGate',bindParentGate);
+
+/* ===== 积分与兑换（demo） =====
+ * 规则：只加分不扣分；每笔按「日期 + 位置 + 标题」去重；当天可撤，跨天锁定；
+ * 日上限 12 分硬封顶；兑换需家长密码；不做随机奖励。
+ */
+const POINTS_DAY_CAP = 12, POINTS_BONUS = 3, POINTS_OWN_CAP = 2;
+const DEFAULT_PRIZES = [
+  { id: 'play30', icon: '⏳', name: '周末多玩 30 分钟', cost: 30, note: '周末任选一天，说一声就行' },
+  { id: 'dinner', icon: '🍜', name: '晚餐我说了算', cost: 60, note: '点一次外卖，或选今晚吃什么' },
+  { id: 'book', icon: '📖', name: '一本书 / 一本漫画', cost: 120, note: '去书店自己挑一本' },
+  { id: 'zoo', icon: '🐼', name: '动物园一整天', cost: 260, note: '周末出门，一整天都算' }
+];
+const POINT_RULES = [
+  ['爸爸奥数', 3],
+  ['学校作业 / 语文 / 英语', 2],
+  ['课外班：鼓 / 舞蹈 / 昂立', 2],
+  ['生活自理：书包、桌面', 1],
+  ['自己加的小事', 1, '每天最多 2 分'],
+  ['一天全部做完', 3, '额外奖励']
+];
+
+function pointsStore() {
+  if (!data.points || typeof data.points !== 'object') data.points = {};
+  if (!Array.isArray(data.points.ledger)) data.points.ledger = [];
+  if (!Array.isArray(data.points.spent)) data.points.spent = [];
+  return data.points;
+}
+function pointsOn(key) { return pointsStore().ledger.filter(x => x.date === key).reduce((n, x) => n + (Number(x.pts) || 0), 0); }
+const pointsEarned = () => pointsStore().ledger.reduce((n, x) => n + (Number(x.pts) || 0), 0);
+const pointsSpent = () => pointsStore().spent.reduce((n, x) => n + (Number(x.cost) || 0), 0);
+const pointsBalance = () => Math.max(0, pointsEarned() - pointsSpent());
+const pointsWeek = () => { const keys = weekKeys(); return pointsStore().ledger.filter(x => keys.includes(x.date)).reduce((n, x) => n + (Number(x.pts) || 0), 0); };
+
+const taskPointId=(key,task)=>`t|${key}|${task[0]||''}|${task[2]||''}`;
+function pointsForTask(task) {
+  const title = task[2] || '', tag = task[3] || '';
+  if (/奥数|数学/.test(title)) return 3;
+  if (/学校|作业|语文|英语|昂立|绘本|单词/.test(title)) return 2;
+  if (/舞蹈|架子鼓|活动|才艺|泉灵/.test(title)) return 2;
+  if (/整理|书包|桌面|准备|习惯/.test(title) || tag === '习惯' || tag === '家庭') return 1;
+  return 1;
+}
+
+// 记一笔分：id 去重 + 日上限 + 自加小事单独限额，返回实际加到的分
+function awardPoints(id, label, pts, kind) {
+  if (!id || !pts) return 0;
+  const P = pointsStore(), date = todayKey();
+  if (P.ledger.some(x => x.id === id)) return 0;
+  let give = Math.min(pts, Math.max(0, POINTS_DAY_CAP - pointsOn(date)));
+  if (kind === 'own') {
+    const own = P.ledger.filter(x => x.date === date && x.kind === 'own').reduce((n, x) => n + (Number(x.pts) || 0), 0);
+    give = Math.min(give, Math.max(0, POINTS_OWN_CAP - own));
+  }
+  if (give <= 0) return 0;
+  P.ledger.push({ id, date, label, pts: give, full: pts, kind: kind || 'task', at: Date.now() });
+  return give;
+}
+// 撤一笔分：当天可撤，跨天锁定（返回 -1 表示锁住）
+function revokePoints(id) {
+  const P = pointsStore(), i = P.ledger.findIndex(x => x.id === id);
+  if (i < 0) return 0;
+  if (P.ledger[i].date !== todayKey()) return -1;
+  return P.ledger.splice(i, 1)[0].pts || 0;
+}
+const hasPointId = id => pointsStore().ledger.some(x => x.id === id);
+
+function syncTaskPoints(key, task) {
+  const id = taskPointId(key, task), msgs = [];
+  if (task[4]) {
+    const kind = task[3] === '自己的事' ? 'own' : 'task';
+    const got = awardPoints(id, task[2] || '一件小事', pointsForTask(task), kind);
+    if (got > 0) msgs.push(`+${got} 分 · ${task[2] || '一件小事'}`);
+    else if (!hasPointId(id)) msgs.push(kind === 'own' ? '自己加的小事今天已经加满分了' : `今天的分攒满了（${POINTS_DAY_CAP} 分）`);
+    renderPointsBadge(); bumpPill();
+  } else {
+    const back = revokePoints(id);
+    if (back === -1) msgs.push('这一笔记在昨天了，分不改');
+    else if (back > 0) msgs.push(`退回 ${back} 分`);
+    renderPointsBadge();
+  }
+  const bonus = syncDayBonus(key);
+  if (bonus > 0) msgs.push(`全部做完，再 +${bonus} 分`);
+  if (msgs.length) { toast(msgs.join(' · ')); bumpPill(); }
+  renderPointsLive();
+  return msgs.join(' · ');
+}
+function syncDayBonus(key) {
+  const list = Array.isArray(data.days[key]) ? data.days[key] : tasksFor(key);
+  const allDone = list.length > 0 && list.every(t => t[4]);
+  const id = `bonus|${key}`;
+  if (allDone) return awardPoints(id, '今天全部做完', POINTS_BONUS, 'bonus');
+  revokePoints(id);
+  return 0;
+}
+// 课外作业按「整块全部勾完 +2」计分：条目多少不影响分值，避免按数量刷分
+function syncHomeworkPoints(typeIndex) {
+  const stats = homeworkStats(homeworkForWeek(), typeIndex);
+  const id = `hw|${weekKeys()[0]}|${typeIndex}`;
+  const label = (homeworkTypes[typeIndex] || ['课外作业'])[0];
+  const msgs = [];
+  if (stats.tasks > 0 && stats.done >= stats.tasks) {
+    const got = awardPoints(id, label, 2, 'task');
+    if (got > 0) { msgs.push(`+${got} 分 · ${label}这一块做完了`); bumpPill(); }
+  } else {
+    const back = revokePoints(id);
+    if (back > 0) msgs.push(`${label}还没全做完，退回 ${back} 分`);
+    else if (back === -1) msgs.push('这一笔记在昨天了，分不改');
+  }
+  renderPointsBadge();
+  renderPointsLive();
+  if (msgs.length) toast(msgs.join(' · '));
+}
+
+function renderPointsBadge() {
+  const n = pointsBalance();
+  const pill = document.getElementById('pillBalance'), bal = document.getElementById('ptsBalance');
+  if (pill) pill.textContent = n;
+  if (bal) bal.textContent = n;
+}
+function bumpPill() {
+  const el = document.getElementById('pointsPill');
+  if (!el) return;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+function dayShortLabel(key) {
+  if (key === todayKey()) return '今天';
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  if (key === keyOf(y)) return '昨天';
+  const d = parseKey(key);
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+let ledgerShown = 16;
+function prizeList() { return Array.isArray(data.prizes) ? data.prizes : DEFAULT_PRIZES; }
+function ensurePrizeArray() {
+  if (!Array.isArray(data.prizes)) data.prizes = DEFAULT_PRIZES.map(p => ({ ...p }));
+  return data.prizes;
+}
+function prizeCount(prizeId) { return pointsStore().spent.filter(x => x.prizeId === prizeId).length; }
+
+function renderPoints() {
+  const P = pointsStore(), bal = pointsBalance();
+  const today = pointsOn(todayKey()), week = pointsWeek(), days = new Set(P.ledger.map(x => x.date)).size;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('ptsBalance', bal); set('ptsToday', today); set('ptsWeek', week); set('ptsDays', days);
+  set('pillBalance', bal);
+
+  const prizes = prizeList();
+  const next = prizes.find(p => Math.max(1, Number(p.cost) || 0) > bal);
+  const hint = document.getElementById('ptsHint');
+  if (hint) hint.textContent = !prizes.length
+    ? '家长还没有设置礼品，先勾一件小事攒分吧'
+    : next
+      ? `再攒 ${Math.max(1, Number(next.cost) || 0) - bal} 分，就能换「${next.name || '新礼品'}」`
+      : '想换的都换得起啦，慢慢挑一件';
+  const goal = document.getElementById('ptsGoal');
+  if (goal) {
+    goal.classList.toggle('hidden', !next);
+    const bar = goal.querySelector('i');
+    if (bar && next) bar.style.width = Math.max(4, Math.min(100, Math.round(bal / Math.max(1, Number(next.cost) || 0) * 100))) + '%';
+  }
+
+  const grid = document.getElementById('prizeGrid');
+  if (grid) {
+    if (!prizes.length) grid.innerHTML = '<div class="empty-state">家长还没有设置礼品。想要的可以先跟爸爸妈妈说一声。</div>';
+    else grid.innerHTML = prizes.map(p => {
+      const cost = Math.max(1, Number(p.cost) || 0), ready = bal >= cost;
+      const pct = Math.min(100, Math.round(bal / cost * 100));
+      const times = prizeCount(p.id);
+      return `<button class="prize-card ${ready ? 'ready' : ''}" data-prize="${escapeAttr(p.id)}">
+        ${times ? `<span class="prize-count">换过 ${times} 次</span>` : ''}
+        <span class="prize-icon" aria-hidden="true">${hwEsc(p.icon || '🎁')}</span>
+        <h4>${hwEsc(p.name || '新礼品')}</h4>
+        <span class="prize-note">${hwEsc(p.note || '')}</span>
+        <span class="prize-bar"><i style="width:${pct}%"></i></span>
+        <span class="prize-cost">${ready ? '现在可以换 · ' : ''}${cost} 分</span>
+      </button>`;
+    }).join('');
+    grid.querySelectorAll('[data-prize]').forEach(b => b.onclick = () => redeemPrize(b.dataset.prize));
+  }
+
+  const rules = document.getElementById('ruleGrid');
+  if (rules) rules.innerHTML = POINT_RULES.map(r => `<span class="rule-chip">${r[0]}<b>+${r[1]}</b>${r[2] ? `<em>${r[2]}</em>` : ''}</span>`).join('');
+
+}
+
+/* ===== 记录：统一放在「我做过的事」里，积分页不再重复一遍 ===== */
+function ledgerRows() {
+  const P = pointsStore();
+  return [
+    ...P.ledger.map(x => ({ date: x.date, at: x.at || 0, label: x.label, val: x.pts, minus: false })),
+    ...P.spent.map(x => ({ date: x.date, at: x.at || 0, label: '换：' + x.name, val: x.cost, minus: true }))
+  ].sort((a, b) => b.at - a.at);
+}
+function noteOfDay(key) {
+  const h = (data.history || []).find(x => x.date === key);
+  return h && h.note ? h.note : '';
+}
+function renderGrowthLedger() {
+  const box = document.getElementById('growthLedger');
+  if (!box) return;
+  const allRows = ledgerRows();
+  if (!allRows.length) {
+    box.innerHTML = '<div class="empty-state">还没有记录。勾掉今天第一件小事，这里就会亮起来。</div>';
+    return;
+  }
+  const rows = allRows.slice(0, ledgerShown);
+  let last = '', html = '';
+  rows.forEach(r => {
+    if (r.date !== last) {
+      // 分组头只算「那天攒到多少」，兑换单独成行显示，不冲掉当天的成绩
+      const daySum = allRows.filter(x => x.date === r.date && !x.minus).reduce((n, x) => n + (Number(x.val) || 0), 0);
+      const tail = daySum ? `+${daySum}` : '';
+      html += `<div class="pts-day"><span>${dayShortLabel(r.date)}</span>${tail ? `<b>${tail}</b>` : ''}</div>`;
+      const note = noteOfDay(r.date);
+      if (note) html += `<div class="pts-note">“${hwEsc(note)}”</div>`;
+      last = r.date;
+    }
+    const time = r.at ? new Date(r.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+    html += `<div class="pts-row ${r.minus ? 'minus' : ''}"><span class="pts-when">${time}</span><span class="pts-name">${hwEsc(r.label)}</span><span class="pts-val">${r.minus ? '−' : '+'}${r.val}</span></div>`;
+  });
+  if (allRows.length > rows.length) html += `<button class="pts-more" id="ptsMore" type="button">看更早的记录（还有 ${allRows.length - rows.length} 条）</button>`;
+  box.innerHTML = html;
+  const more = document.getElementById('ptsMore');
+  if (more) more.onclick = () => { ledgerShown += 40; renderGrowthLedger(); };
+}
+// 只更新数字，不重建奖品卡（避免勾选时手中的按钮被判为已移除）
+function renderPointsLive() {
+  const bal = pointsBalance();
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('ptsBalance', bal); set('ptsToday', pointsOn(todayKey())); set('ptsWeek', pointsWeek());
+  const view = document.getElementById('pointsView');
+  if (view && !view.classList.contains('hidden')) renderPoints();
+  const growth = document.getElementById('growthView');
+  if (growth && !growth.classList.contains('hidden')) renderGrowth();
+}
+
+function redeemPrize(id) {
+  const p = prizeList().find(x => x.id === id);
+  if (!p) return;
+  const bal = pointsBalance();
+  if (bal < p.cost) { toast(`还差 ${p.cost - bal} 分，再攒攒`); return; }
+  openParentGate(() => {
+    pointsStore().spent.push({ id: `spend|${id}|${Date.now()}`, prizeId: id, name: p.name, cost: p.cost, date: todayKey(), at: Date.now() });
+    save(); renderPoints(); bumpPill();
+    toast(`换好了：${p.name}（−${p.cost} 分）`);
+  }, `输入密码后兑换「${p.name}」`);
+}
+// 已经勾掉的今天任务也算进来，打开就有数
+function backfillTodayPoints() {
+  const key = todayKey(), list = tasksFor(key);
+  list.forEach((t, i) => {
+    if (!t[4]) return;
+    awardPoints(taskPointId(key, t), t[2] || '一件小事', pointsForTask(t), t[3] === '自己的事' ? 'own' : 'task');
+  });
+  if (list.length && list.every(t => t[4])) awardPoints(`bonus|${key}`, '今天全部做完', POINTS_BONUS, 'bonus');
+  save();
+}
+// 错题反思：一天只记一次，避免靠数量刷分
+function awardReviewPoints() {
+  const got = awardPoints(`review|${todayKey()}`, '写下错题反思', 2, 'review');
+  if (got > 0) { toast(`+${got} 分 · 记下这道错题`); bumpPill(); }
+  renderPointsBadge();
+  renderPointsLive();
+}
+
+function renderPrizeSettings() {
+  const host = document.getElementById('prizeSettingsHost');
+  if (!host) return;
+  const list = prizeList();
+  host.innerHTML = `<div class="schedule-settings prize-settings">
+    <div class="schedule-settings-head"><div><h3>积分与礼品</h3><p>孩子只能看到这里配好的礼品，不能改。改完立刻生效。</p></div><button class="mini-btn" id="addPrize" type="button">＋ 加一个</button></div>
+    <div class="prize-edit-list" id="prizeEditList">${list.map((p, i) => `<div class="prize-edit-row">
+      <input data-pn="${i}" value="${escapeAttr(p.name || '')}" maxlength="16" placeholder="礼品名称" aria-label="礼品名称" />
+      <input data-pc="${i}" type="number" inputmode="numeric" min="1" max="999" value="${Math.max(1, Number(p.cost) || 0)}" aria-label="需要多少分" />
+      <input data-pd="${i}" value="${escapeAttr(p.note || '')}" maxlength="24" placeholder="一句说明（可留空）" aria-label="礼品说明" />
+      <button class="prize-del" data-pdel="${i}" type="button" aria-label="删除这个礼品">×</button>
+    </div>`).join('')}</div>
+    <p class="prize-settings-note">分值改多少都不会影响已经攒下的分和兑换记录；删掉礼品，换过的记录也还在。</p>
+  </div>`;
+  const box = document.getElementById('prizeEditList');
+  const arr = () => ensurePrizeArray();
+  if (box) {
+    box.querySelectorAll('[data-pn]').forEach(el => el.oninput = () => {
+      const t = arr()[Number(el.dataset.pn)];
+      if (t) { t.name = el.value; save(); renderPoints(); }
+    });
+    box.querySelectorAll('[data-pc]').forEach(el => el.oninput = () => {
+      const t = arr()[Number(el.dataset.pc)];
+      if (t) { t.cost = Math.max(1, Math.min(999, Math.round(Number(el.value) || 1))); save(); renderPoints(); }
+    });
+    box.querySelectorAll('[data-pd]').forEach(el => el.oninput = () => {
+      const t = arr()[Number(el.dataset.pd)];
+      if (t) { t.note = el.value; save(); renderPoints(); }
+    });
+    box.querySelectorAll('[data-pdel]').forEach(el => el.onclick = () => {
+      const i = Number(el.dataset.pdel), t = arr()[i];
+      if (!t) return;
+      if (!confirm(`删掉「${t.name || '这个礼品'}」吗？已经兑换过的记录会保留。`)) return;
+      arr().splice(i, 1);
+      save(); renderPrizeSettings(); renderPoints();
+      toast('已删除');
+    });
+  }
+  const add = document.getElementById('addPrize');
+  if (add) add.onclick = () => {
+    const a = arr();
+    a.push({ id: `p${Date.now()}`, icon: '🎁', name: '新礼品', cost: 30, note: '' });
+    save(); renderPrizeSettings(); renderPoints();
+    const rows = document.querySelectorAll('#prizeEditList .prize-edit-row');
+    const last = rows[rows.length - 1];
+    if (last) { const input = last.querySelector('[data-pn]'); if (input) { input.focus(); input.select(); } }
+  };
+}
+
+function initPoints() {
+  pointsStore();
+  backfillTodayPoints();
+  renderPointsBadge();
+  renderPoints();
+  renderPrizeSettings();
+  const pill = document.getElementById('pointsPill');
+  if (pill) pill.onclick = () => showView('points');
+  const reset = document.getElementById('pointsReset');
+  if (reset) reset.onclick = () => openParentGate(() => {
+    if (!confirm('清空全部积分和记录吗？攒分进度会归零，这个操作不能撤销。')) return;
+    data.points = { ledger: [], spent: [] };
+    save(); renderPoints(); renderPointsBadge();
+    toast('积分已清空');
+  }, '输入密码后清空积分');
+}
+safeRun('points', initPoints);
